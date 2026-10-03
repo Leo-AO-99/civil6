@@ -72,8 +72,12 @@ local function flushKind(player,kind)
     local item=o[currentName](o)
     if not item or item<0 then return end
     local before=o[progressName](o,item)
-    local amount,left=C.withdraw(bank,o[costName](o,item),before)
+    local amount=C.withdraw(bank,o[costName](o,item),before)
+    -- Keep fractional rewards in the bank. A rounded native write followed by
+    -- an asynchronous ResearchChanged must not repeatedly refund/retry dust.
+    amount=math.floor(amount)
     if amount<=0 then return end
+    local left=bank-amount
     -- Reserve before mutating progress: completion callbacks can be re-entrant.
     s[kind]=left
     s.pending={kind=kind,item=item,before=before,amount=amount}
