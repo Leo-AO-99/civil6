@@ -40,23 +40,45 @@ local function researchAdapter(player,kind)
         return o, 'GetResearchingTech','GetResearchCost','GetResearchProgress','ChangeCurrentResearchProgress','HasTech'
     end
     local o=player:GetCulture()
+    if not o.GetCulturalProgress and ExposedMembers and ExposedMembers.MNS_ReadCulture then
+        local native=o
+        local function read(item) return ExposedMembers.MNS_ReadCulture(player:GetID(),item) end
+        o={MNS_DeferredProgress=true,
+            GetProgressingCivic=function()
+                local item=native:GetProgressingCivic()
+                local view=read(item)
+                return view and view.current==item and item or -1
+            end,
+            GetCultureCost=function(_,item) return native:GetCultureCost(item) end,
+            GetCulturalProgress=function(_,item) local view=read(item);return view and view.progress end,
+            HasCivic=function(_,item) return native:HasCivic(item) end,
+            ChangeCurrentCulturalProgress=function(_,amount) native:ChangeCurrentCulturalProgress(amount) end}
+    end
     return o, 'GetProgressingCivic','GetCultureCost','GetCulturalProgress','ChangeCurrentCulturalProgress','HasCivic'
 end
 local function settlePending(player,s)
     local r=s.pending
-    if not r then return end
+    if not r then return true end
     local o,_,_,progressName,_,hasName=researchAdapter(player,r.kind)
     if not o[progressName] then error('研究进度读取 API 不可用；保留待结算记录，不猜测余额。') end
     local accepted
     if o[hasName](o,r.item) then accepted=r.amount
-    else accepted=math.min(r.amount,math.max(0,o[progressName](o,r.item)-r.before)) end
+    else
+        local progress=o[progressName](o,r.item)
+        if progress==nil then return false end
+        accepted=math.min(r.amount,math.max(0,progress-r.before))
+        -- UI reads can lag gameplay writes. Never refund/retry an unacknowledged write.
+        if r.uiReadback and accepted<r.amount then return false end
+    end
     s[r.kind]=(s[r.kind] or 0)+r.amount-accepted
     s.pending=nil
     save(player,s)
+    log(string.format('KNOWLEDGE %s accepted=%.2f bank=%.2f',r.kind,accepted,s[r.kind] or 0))
+    return true
 end
 local function flushKind(player,kind)
     local s=state(player)
-    settlePending(player,s)
+    if settlePending(player,s)==false then return end
     local bank=s[kind] or 0
     if bank<=0 then return end
     local o,currentName,costName,progressName,changeName=researchAdapter(player,kind)
@@ -72,6 +94,7 @@ local function flushKind(player,kind)
     local item=o[currentName](o)
     if not item or item<0 then return end
     local before=o[progressName](o,item)
+    if before==nil then return end
     local amount=C.withdraw(bank,o[costName](o,item),before)
     -- Keep fractional rewards in the bank. A rounded native write followed by
     -- an asynchronous ResearchChanged must not repeatedly refund/retry dust.
@@ -80,11 +103,11 @@ local function flushKind(player,kind)
     local left=bank-amount
     -- Reserve before mutating progress: completion callbacks can be re-entrant.
     s[kind]=left
-    s.pending={kind=kind,item=item,before=before,amount=amount}
+    s.pending={kind=kind,item=item,before=before,amount=amount,uiReadback=o.MNS_DeferredProgress or nil}
     save(player,s)
     local ok,err=pcall(o[changeName],o,amount)
     -- Read back, not a blind refund on exceptions: an API may partially apply first.
-    settlePending(player,s)
+    if not o.MNS_DeferredProgress then settlePending(player,s) end
     if not ok then error(err) end
 end
 local function flush(playerID)
@@ -322,7 +345,10 @@ local function request(playerID,args)
         status(playerID,'本开发版暂不支持联机/热座，未执行操作。'); return
     end
     local ok,message
-    if args.Action=='Retire' then
+    if args.Action=='FlushKnowledge' then
+        flush(playerID)
+        return
+    elseif args.Action=='Retire' then
         local id=tonumber(args.UnitID)
         local unit=id and Players[playerID]:GetUnits():FindID(id)
         local role=W.unitRole(unit)

@@ -1,6 +1,13 @@
 -- Extend native city/selected-unit controls; Gameplay validates every request.
 include('MNS_World')
 local W = MNS_World
+-- UI owns the read-only cultural-progress API; all mutations remain in Gameplay.
+ExposedMembers.MNS_ReadCulture=function(playerID,item)
+    local player=Players[playerID]
+    if not player or not item or item<0 then return nil end
+    local culture=player:GetCulture()
+    return {current=culture:GetProgressingCivic(),progress=culture:GetCulturalProgress(item)}
+end
 local faithList, faithScroll, noFaithContent, actionStack, actionsParent
 local targets, selected, selectedUnit = {}, 1, nil
 local confirmPlot, pickerOpen, lastError = nil, false, nil
@@ -67,6 +74,25 @@ end
 local function request(args)
     args.OnStart = 'MNS_Action'
     UI.RequestPlayerOperation(Game.GetLocalPlayer(), PlayerOperations.EXECUTE_SCRIPT, args)
+end
+local lastKnowledgeRequest
+local function flushKnowledge(player)
+    if not player or not W.minoan(player:GetID()) or UI.IsGameCoreBusy() then return end
+    local s=player:GetProperty('MNS_Knowledge') or {}
+    local culture=player:GetCulture()
+    local pending=s.pending
+    local item=pending and pending.kind=='culture' and pending.item or culture:GetProgressingCivic()
+    if not item or item<0 then return end
+    local progress=culture:GetCulturalProgress(item)
+    if pending then
+        if pending.kind~='culture' or not pending.uiReadback then return end
+        if not culture:HasCivic(item) and progress<pending.before+pending.amount then return end
+    elseif (s.culture or 0)<1 or culture:GetCultureCost(item)-progress<1 then return end
+    local key=table.concat({item,progress,s.culture or 0,pending and pending.amount or 0,
+        pending and pending.before or -1},':')
+    if key==lastKnowledgeRequest then return end
+    lastKnowledgeRequest=key
+    request{Action='FlushKnowledge'}
 end
 local retiring={}
 local function retireSpentUnits(player)
@@ -198,6 +224,7 @@ local function refresh()
     local id = Game.GetLocalPlayer()
     local player = id ~= nil and id >= 0 and Players[id] or nil
     retireSpentUnits(player)
+    flushKnowledge(player)
     refreshPurchases(player)
     refreshUnit(player)
     if player and W.minoan(id) and not governorChecked then
@@ -259,5 +286,6 @@ Events.LocalPlayerTurnEnd.Add(closePreview)
 Events.InterfaceModeChanged.Add(closePreview)
 Events.UnitSelectionChanged.Add(closePreview)
 Events.GameCoreEventPublishComplete.Add(safeRefresh)
+Events.CivicChanged.Add(safeRefresh)
 Events.LoadGameViewStateDone.Add(safeRefresh)
 ContextPtr:SetInitHandler(safeRefresh)
