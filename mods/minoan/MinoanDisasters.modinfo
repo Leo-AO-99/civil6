@@ -1,0 +1,112 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Mod id="f4f56898-125b-43e1-953d-9d39c3c73e32" version="4">
+  <Properties>
+    <Name>Minoan Disasters — 米诺斯天灾文明 [Alpha]</Name>
+    <Description>单人开发测试版。半价圣地、天灾信仰科文、祈灾与彗星。请先阅读 README 的实现差异。</Description>
+    <Authors>civil6</Authors>
+    <Teaser>米诺斯天灾与祭司玩法</Teaser>
+    <CompatibleVersions>2.0</CompatibleVersions>
+    <AffectsSavedGames>1</AffectsSavedGames>
+  </Properties>
+  <Dependencies>
+    <Mod id="4873eb62-8ccc-4574-b784-dda455e74e68" title="Gathering Storm" />
+  </Dependencies>
+  <FrontEndActions>
+    <UpdateText id="MNS_Front_Text">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Text/MNS_Text.xml</File>
+    </UpdateText>
+    <UpdateIcons id="MNS_Front_Icons">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Data/Icons.sql</File>
+      <File>Data/GovernorIcons.sql</File>
+    </UpdateIcons>
+    <UpdateDatabase id="MNS_Config">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Data/Configuration.sql</File>
+    </UpdateDatabase>
+    <UpdateColors id="MNS_FrontEndActions_Colors">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Data/Colors.sql</File>
+    </UpdateColors>
+  </FrontEndActions>
+  <InGameActions>
+    <UpdateText id="MNS_Game_Text">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Text/MNS_Text.xml</File>
+    </UpdateText>
+    <UpdateIcons id="MNS_Game_Icons">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Data/Icons.sql</File>
+      <File>Data/GovernorIcons.sql</File>
+    </UpdateIcons>
+    <UpdateDatabase id="MNS_Data">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Config/Balance.sql</File>
+      <File>Data/Civilization.sql</File>
+      <File>Data/Governors.sql</File>
+      <File>Data/District.sql</File>
+    </UpdateDatabase>
+    <ImportFiles id="MNS_Imports">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Gameplay/MNS_Core.lua</File>
+      <File>Gameplay/MNS_World.lua</File>
+      <File>Gameplay/MNS_Protection.lua</File>
+      <File>UI/MNS_Panel.lua</File>
+    </ImportFiles>
+    <AddGameplayScripts id="MNS_Logic">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Gameplay/MNS_Gameplay.lua</File>
+      <File>Gameplay/MNS_Diagnostics.lua</File>
+    </AddGameplayScripts>
+    <AddUserInterfaces id="MNS_UI">
+      <Properties>
+        <Context>InGame</Context>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>UI/MNS_Panel.xml</File>
+    </AddUserInterfaces>
+    <UpdateColors id="MNS_InGameActions_Colors">
+      <Properties>
+        <LoadOrder>2000</LoadOrder>
+      </Properties>
+      <File>Data/Colors.sql</File>
+    </UpdateColors>
+  </InGameActions>
+  <Files>
+    <File>Config/Balance.sql</File>
+    <File>Data/Civilization.sql</File>
+    <File>Data/Configuration.sql</File>
+    <File>Data/District.sql</File>
+    <File>Data/Icons.sql</File>
+    <File>Gameplay/MNS_Core.lua</File>
+    <File>Gameplay/MNS_Diagnostics.lua</File>
+    <File>Gameplay/MNS_Gameplay.lua</File>
+    <File>Gameplay/MNS_Protection.lua</File>
+    <File>Gameplay/MNS_World.lua</File>
+    <File>Text/MNS_Text.xml</File>
+    <File>UI/MNS_Panel.lua</File>
+    <File>UI/MNS_Panel.xml</File>
+    <File>Data/Colors.sql</File>
+    <File>Data/Governors.sql</File>
+    <File>Data/GovernorIcons.sql</File>
+  </Files>
+</Mod>

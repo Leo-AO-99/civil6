@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Context Name="MNS_Panel">
+  <Grid ID="Panel" Anchor="L,T" Offset="12,180" Size="370,430" Style="Grid9DetailFive140">
+    <Label ID="Title" Anchor="L,T" Offset="16,12" String="米诺斯 · 天灾面板（测试版）" Font="BodyText"/>
+    <Button ID="Toggle" Anchor="R,T" Offset="12,8" Size="48,28" Style="BaseButton">
+      <Label Anchor="C,C" String="收起"/>
+    </Button>
+    <Container ID="Body" Anchor="L,T" Offset="12,44" Size="346,376">
+      <Label ID="Summary" Anchor="L,T" Offset="0,0" Size="342,64" WrapWidth="340" Font="BodyText"/>
+      <Button ID="BuyOracle" Anchor="L,T" Offset="0,72" Size="342,30" Style="BaseButton">
+        <Label ID="BuyOracleText" Anchor="C,C" String="购买神谕祭司"/>
+      </Button>
+      <Button ID="BuyProphet" Anchor="L,T" Offset="0,108" Size="342,30" Style="BaseButton">
+        <Label ID="BuyProphetText" Anchor="C,C" String="购买末日先知"/>
+      </Button>
+      <Label ID="UnitInfo" Anchor="L,T" Offset="0,148" Size="342,44" WrapWidth="340" Font="BodyText"/>
+      <Button ID="Previous" Anchor="L,T" Offset="0,198" Size="48,30" Style="BaseButton">
+        <Label Anchor="C,C" String="上一格"/>
+      </Button>
+      <Label ID="Target" Anchor="L,T" Offset="58,196" Size="224,52" WrapWidth="222" Font="BodyText"/>
+      <Button ID="Next" Anchor="R,T" Offset="0,198" Size="48,30" Style="BaseButton">
+        <Label Anchor="C,C" String="下一格"/>
+      </Button>
+      <Button ID="Cast" Anchor="L,T" Offset="0,252" Size="342,32" Style="BaseButton">
+        <Label ID="CastText" Anchor="C,C" String="在此祈灾"/>
+      </Button>
+      <Label ID="Status" Anchor="L,T" Offset="0,298" Size="342,74" WrapWidth="340" Font="BodyText"/>
+    </Container>
+  </Grid>
+</Context>

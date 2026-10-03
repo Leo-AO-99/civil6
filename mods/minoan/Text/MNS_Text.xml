@@ -1,0 +1,119 @@
+<?xml version='1.0' encoding='utf-8'?>
+<GameData>
+  <LocalizedText>
+    <Replace Tag="LOC_MNS_CIV_NAME" Language="zh_Hans_CN">
+      <Text>米诺斯</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CIV_NAME" Language="en_US">
+      <Text>Minoan</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CIV_DESCRIPTION" Language="zh_Hans_CN">
+      <Text>米诺斯文明（天灾测试版）</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CIV_DESCRIPTION" Language="en_US">
+      <Text>Minoan Civilization (Disaster Alpha)</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CIV_ADJECTIVE" Language="zh_Hans_CN">
+      <Text>米诺斯的</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CIV_ADJECTIVE" Language="en_US">
+      <Text>Minoan</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_LEADER_NAME" Language="zh_Hans_CN">
+      <Text>米诺斯</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_LEADER_NAME" Language="en_US">
+      <Text>Minos</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CIV_ABILITY_NAME" Language="zh_Hans_CN">
+      <Text>天灾共生</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CIV_ABILITY_NAME" Language="en_US">
+      <Text>Living with Catastrophe</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CIV_ABILITY_DESCRIPTION" Language="zh_Hans_CN">
+      <Text>己方国土每隔数回合额外尝试肥地灾害：洪水、火山、森林/雨林火、沙尘暴或暴风雪。没有合法目标则跳过；不召唤龙卷风、陨石或毁地事件。保留原生增产概率与恢复过程。神谕祭司也使用此白名单。</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CIV_ABILITY_DESCRIPTION" Language="en_US">
+      <Text>Extra cultivation disasters use a closed list: river floods, volcanoes, forest/jungle fires, dust storms and blizzards. Invalid sites are skipped; no tornado, meteor or terrain-destroying fallback. Native fertility probabilities and recovery remain. Oracle rituals use the same list.</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_LEADER_ABILITY_NAME" Language="zh_Hans_CN">
+      <Text>宫廷庇护</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_LEADER_ABILITY_NAME" Language="en_US">
+      <Text>Palatial Shelter</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_LEADER_ABILITY_DESCRIPTION" Language="zh_Hans_CN">
+      <Text>开局额外获得总督头衔，默认1个，由你自行任命。七位专属总督沿用原名、肖像和晋升，默认目标两回合就位，并接入梁的原生结构防护。Lua只补受灾人口；受庇护城市按信仰获一次性科文。其他文明总督不变。原生防护仍需实测。</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_LEADER_ABILITY_DESCRIPTION" Language="en_US">
+      <Text>Receive bonus Governor Titles at game start (default: one); you choose the appointment. Seven unique governors retain original names, portraits and promotions, with a two-turn establishment target and native Liang structural prevention. Lua compensates disaster population losses only; protected cities receive Faith-based knowledge. Other civilizations are unchanged. Native behavior requires in-game testing.</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_SANCTUARY_NAME" Language="zh_Hans_CN">
+      <Text>峰顶圣所</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_SANCTUARY_NAME" Language="en_US">
+      <Text>Peak Sanctuary</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_SANCTUARY_DESCRIPTION" Language="zh_Hans_CN">
+      <Text>替代圣地，默认半价。保留普通圣地功能，火山、地热裂缝及泛滥平原提供额外信仰相邻。</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_SANCTUARY_DESCRIPTION" Language="en_US">
+      <Text>Replaces the Holy Site at half cost by default. Additional Faith adjacency from volcanoes, geothermal fissures and floodplains.</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_SPECIAL_ADJACENCY" Language="zh_Hans_CN">
+      <Text>来自危险自然地形的额外信仰。</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_SPECIAL_ADJACENCY" Language="en_US">
+      <Text>Additional Faith from hazardous terrain.</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_KNOSSOS" Language="zh_Hans_CN">
+      <Text>克诺索斯</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_KNOSSOS" Language="en_US">
+      <Text>Knossos</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_PHAISTOS" Language="zh_Hans_CN">
+      <Text>斐斯托斯</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_PHAISTOS" Language="en_US">
+      <Text>Phaistos</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_MALIA" Language="zh_Hans_CN">
+      <Text>马利亚</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_MALIA" Language="en_US">
+      <Text>Malia</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_ZAKROS" Language="zh_Hans_CN">
+      <Text>扎克罗斯</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_ZAKROS" Language="en_US">
+      <Text>Zakros</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_GOURNIA" Language="zh_Hans_CN">
+      <Text>古尔尼亚</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_GOURNIA" Language="en_US">
+      <Text>Gournia</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_TYLISSOS" Language="zh_Hans_CN">
+      <Text>提利索斯</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_TYLISSOS" Language="en_US">
+      <Text>Tylissos</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_PALAIKASTRO" Language="zh_Hans_CN">
+      <Text>帕莱卡斯特罗</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_PALAIKASTRO" Language="en_US">
+      <Text>Palaikastro</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_PETRAS" Language="zh_Hans_CN">
+      <Text>佩特拉斯</Text>
+    </Replace>
+    <Replace Tag="LOC_MNS_CITY_PETRAS" Language="en_US">
+      <Text>Petras</Text>
+    </Replace>
+  </LocalizedText>
+</GameData>

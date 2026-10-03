@@ -1,0 +1,148 @@
+Minoan Disasters Alpha 4
+Command: python tools/validate.py --require-lua
+119 tests: 23 core + 13 gameplay + 15 governor state + 19 governor SQL + 37 cultivation/native boundaries + 12 startup SQL.
+Additional static checks: Lua parse, XML/manifest/includes/localization, synthetic SQL.
+No Civ VI engine or real game database was used.
+
+PASS XML, mod manifest, include paths, localization references
+PASS SQL on synthetic fixtures: costs, points, copied columns, scope, config/icons/colors
+test_all_foreign_keys_resolve (__main__.GovernorSQLTests.test_all_foreign_keys_resolve) ... ok
+test_all_variants_gated_by_minos_trait (__main__.GovernorSQLTests.test_all_variants_gated_by_minos_trait) ... ok
+test_amani_city_state_assignment_retained (__main__.GovernorSQLTests.test_amani_city_state_assignment_retained) ... ok
+test_default_speed_is_250_only_on_variants (__main__.GovernorSQLTests.test_default_speed_is_250_only_on_variants) ... ok
+test_disabled_protection_does_not_bind_extra_native_effect (__main__.GovernorSQLTests.test_disabled_protection_does_not_bind_extra_native_effect) ... ok
+test_each_variant_replaces_one_distinct_original (__main__.GovernorSQLTests.test_each_variant_replaces_one_distinct_original) ... ok
+test_exactly_seven_independent_variants (__main__.GovernorSQLTests.test_exactly_seven_independent_variants) ... ok
+test_governor_level_modifiers_copied (__main__.GovernorSQLTests.test_governor_level_modifiers_copied) ... ok
+test_ibrahim_societies_other_mods_not_cloned (__main__.GovernorSQLTests.test_ibrahim_societies_other_mods_not_cloned) ... ok
+test_icon_aliases_preserve_all_original_styles (__main__.GovernorSQLTests.test_icon_aliases_preserve_all_original_styles) ... ok
+test_invalid_speed_is_rejected_instead_of_cast_to_zero (__main__.GovernorSQLTests.test_invalid_speed_is_rejected_instead_of_cast_to_zero) ... ok
+test_legacy_timer_and_global_switches_removed_from_settings (__main__.GovernorSQLTests.test_legacy_timer_and_global_switches_removed_from_settings) ... ok
+test_missing_or_changed_native_contract_is_not_silently_repaired (__main__.GovernorSQLTests.test_missing_or_changed_native_contract_is_not_silently_repaired) ... ok
+test_names_portraits_titles_and_unknown_columns_preserved (__main__.GovernorSQLTests.test_names_portraits_titles_and_unknown_columns_preserved) ... ok
+test_native_state_marker_is_reversible_and_trait_scoped (__main__.GovernorSQLTests.test_native_state_marker_is_reversible_and_trait_scoped) ... ok
+test_native_structural_prevention_bound_only_to_seven_variants (__main__.GovernorSQLTests.test_native_structural_prevention_bound_only_to_seven_variants) ... ok
+test_original_governor_rows_completely_unchanged (__main__.GovernorSQLTests.test_original_governor_rows_completely_unchanged) ... ok
+test_shared_promotion_sets_preserve_skill_trees (__main__.GovernorSQLTests.test_shared_promotion_sets_preserve_skill_trees) ... ok
+test_tuning_changes_only_variant_native_speed (__main__.GovernorSQLTests.test_tuning_changes_only_variant_native_speed) ... ok
+
+----------------------------------------------------------------------
+Ran 19 tests in 0.107s
+
+OK
+test_bias_strength_configurable (__main__.StartupSQLTests.test_bias_strength_configurable) ... ok
+test_bonus_bound_once_only_to_minos_leader (__main__.StartupSQLTests.test_bonus_bound_once_only_to_minos_leader) ... ok
+test_default_one_title_correct_native_argument (__main__.StartupSQLTests.test_default_one_title_correct_native_argument) ... ok
+test_default_volcano_first_priority_floodplains_secondary (__main__.StartupSQLTests.test_default_volcano_first_priority_floodplains_secondary) ... ok
+test_invalid_settings_rejected (__main__.StartupSQLTests.test_invalid_settings_rejected) ... ok
+test_missing_feature_is_not_created (__main__.StartupSQLTests.test_missing_feature_is_not_created) ... ok
+test_missing_settings_rejected (__main__.StartupSQLTests.test_missing_settings_rejected) ... ok
+test_native_once_and_permanent_flags (__main__.StartupSQLTests.test_native_once_and_permanent_flags) ... ok
+test_other_civilizations_unchanged (__main__.StartupSQLTests.test_other_civilizations_unchanged) ... ok
+test_title_count_configurable (__main__.StartupSQLTests.test_title_count_configurable) ... ok
+test_zero_bias_skips_rows_not_native_tier_zero (__main__.StartupSQLTests.test_zero_bias_skips_rows_not_native_tier_zero) ... ok
+test_zero_disables_bonus_without_orphan_arguments (__main__.StartupSQLTests.test_zero_disables_bonus_without_orphan_arguments) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.035s
+
+OK
+PASS all Lua files parse
+PASS reward uses yield, keeps fractions
+PASS negative faith cannot debit knowledge
+PASS withdraw caps at research remainder
+PASS overflow stays when item complete
+PASS small research rewards accumulate
+PASS price ramps by purchases, not living units
+PASS same disaster same city never pays twice
+PASS one disaster may pay two affected cities
+PASS city-per-turn cap prevents burst spam
+PASS fire spread with a new ID obeys cooldown
+PASS non-fire disasters bypass fire cooldown
+PASS cast rejects invalid charges
+PASS cast rejects invalid ours
+PASS cast rejects invalid distance
+PASS cast rejects invalid active
+PASS cast rejects invalid alreadyCast
+PASS cast rejects invalid moves
+PASS cast rejects invalid targetOwner
+PASS cast rejects invalid visible
+PASS friendly ritual accepted
+PASS offensive ritual requires war
+PASS offensive ritual never targets own or neutral land
+PASS NaN/infinity settings use defaults
+23 core tests passed
+[MNS] Loaded Alpha 4: native structure protection; population-only compensation; closed cultivation pool. Comet records=true; in-game validation required.
+PASS shelter follows native establishment, not elapsed assignment time
+PASS purchase deducts configured faith exactly once
+PASS enemy target rejected with no charge or disaster
+PASS disaster bracket compensates population but NEVER repairs any structures
+PASS native duplicate callback never duplicates payout
+PASS unrelated population change never heals
+PASS science completes selected tech and retains overflow despite reentrancy
+PASS culture separately completes civic and retains overflow
+PASS unavailable progress getter holds reward instead of discarding it
+PASS native loss of establishment immediately removes shelter
+PASS failed unit creation charges no faith
+PASS prophet price increments with purchases
+PASS peace blocks comet; war permits it; no economic reward
+13 gameplay mock tests passed (not a game-runtime test)
+PASS nil city and absent native marker are not protected
+PASS old assignment timer never activates protection
+PASS UI governor availability cannot override native marker
+PASS native marker works without any UI-only governor getter
+PASS removal neutralization and transition markers revoke protection
+PASS serialization roundtrip retains active marker
+PASS other civilization never receives Minoan protection
+PASS protection switch disables protection without changing native state
+PASS diagnostic absent outside supported UI returns unknown not pass
+PASS diagnostic accepts all seven one-to-one engine-filtered pairs
+PASS diagnostic detects engine honoring only first replacement
+PASS diagnostic detects unavailable clone
+PASS diagnostic rejects already-appointed original from old save
+PASS diagnostic catches variant leakage into other civilization
+PASS diagnostic does not count other civilization own unique replacements as an error
+15 governor state/diagnostic mock tests passed (not a game-runtime test)
+PASS all twelve allowlisted land events require positive loaded yield data
+PASS closed cultivation pool rejects RANDOM_EVENT_COMET_STRIKE even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_COMET_STRIKE_TARGETED even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_METEOR_SHOWER even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_SEA_LEVEL_RISE4 even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_SOLAR_FLARE even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_NUCLEAR_ACCIDENT even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_TORNADO_FAMILY even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_TORNADO_OUTBREAK even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_DROUGHT_MAJOR even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_DROUGHT_EXTREME even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_VOLCANO_TRIGGERED even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_FLOOD_TRIGGERED even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_FOREST_FIRE_TRIGGERED even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_JUNGLE_FIRE_TRIGGERED even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_MOD_FLOOD_COMET even with positive yields
+PASS closed cultivation pool rejects RANDOM_EVENT_HURRICANE_CAT_5 even with positive yields
+PASS missing fertility table or empty table denies cultivation
+PASS zero amount zero chance and negative yields never qualify as fertility
+PASS late fire recovery yields qualify without fabricating immediate fertility
+PASS repurposed canonical name with comet operator is refused
+PASS global ice-loss halt-fertility and negative-fertility flags refuse canonical event
+PASS forest and jungle use their own event IDs, never each other
+PASS burning or recovering forests cannot be ignited afresh
+PASS flood requires an actual floodplain and a valid river
+PASS volcano only uses existing ordinary volcano, never creates one
+PASS storms match desert tundra snow and respect both category switches
+PASS late climate halt disables floods and storms but not fire or volcano
+PASS unreadable climate fails closed for climate-sensitive cultivation
+[MNS] Loaded Alpha 4: native structure protection; population-only compensation; closed cultivation pool. Comet records=true; in-game validation required.
+PASS automatic scheduler skips barren land instead of using tornado or comet
+[MNS] Loaded Alpha 4: native structure protection; population-only compensation; closed cultivation pool. Comet records=true; in-game validation required.
+PASS automatic scheduler still invokes a fertile forest event
+[MNS] Loaded Alpha 4: native structure protection; population-only compensation; closed cultivation pool. Comet records=true; in-game validation required.
+PASS final invoke gate rejects an injected comet from automatic candidates
+[MNS] Loaded Alpha 4: native structure protection; population-only compensation; closed cultivation pool. Comet records=true; in-game validation required.
+PASS final invoke gate rejects injected comet for Oracle without charging
+PASS population snapshots never read or store infrastructure
+PASS population compensation is restricted to actual affected cities
+PASS lost establishment prevents stale snapshot population compensation
+PASS population compensation does not delete natural growth
+37 cultivation/native-boundary tests passed (not a game-runtime test)
+Validation complete. No Civ VI engine was run.
