@@ -44,7 +44,7 @@ INSERT OR REPLACE INTO MNS_Settings (Name, Value) VALUES
 -- 同一原生灾害ID每城只结算一次；森火另设保守冷却，防跨ID蔓延刷奖。
 ('FireRewardCooldownTurns', '5'),
 -- 保留原生增产概率/恢复时间，不额外加肥力，不保证每次立即或必然增产。
--- 两类祭司复用原版传教士/使徒实例及模型，使用自定义面板购买/施法。
+-- 两类祭司复用原版传教士/使徒实例及模型，在城市信仰列表购买、单位操作区施法。
 ('OracleFaithCost', '400'),
 ('OracleCostIncrease', '0'),
 ('OracleCharges', '2'),

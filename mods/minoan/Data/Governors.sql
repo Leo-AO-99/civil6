@@ -22,7 +22,9 @@ CREATE TEMP TABLE MNS_GovernorSpeedValue (
     Value INTEGER NOT NULL CHECK (TYPEOF(Value) = 'integer' AND Value > 0)
 );
 INSERT INTO MNS_GovernorSpeedValue
-    SELECT Value FROM MNS_Settings WHERE Name = 'MinoanGovernorTransitionStrength';
+    -- Convert before the game's TYPEOF check, preserving invalid-value rejection.
+    SELECT CASE WHEN Value = CAST(Value AS INTEGER) THEN CAST(Value AS INTEGER) END
+    FROM MNS_Settings WHERE Name = 'MinoanGovernorTransitionStrength';
 
 -- Copy complete rows so extra columns from the installed ruleset are preserved.
 CREATE TEMP TABLE MNS_CopyGovernors AS
@@ -55,8 +57,8 @@ INSERT INTO GovernorModifiers (GovernorType, ModifierId)
     FROM GovernorModifiers x JOIN MNS_GovernorReplacements m
     ON m.OriginalGovernorType = x.GovernorType;
 
--- Shared promotion definitions are intentional: preserve their full prerequisite
--- trees, modifiers and conditions, without changing any original promotion.
+-- Seed the original tree membership; private copies are created below while
+-- preserving prerequisites, effects and conditions of the original promotions.
 INSERT INTO GovernorPromotionSets (GovernorType, GovernorPromotion)
     SELECT m.UniqueGovernorType, x.GovernorPromotion
     FROM GovernorPromotionSets x JOIN MNS_GovernorReplacements m
@@ -87,8 +89,8 @@ INSERT INTO ModifierArguments (ModifierId, Name, Value) VALUES
 INSERT INTO TraitModifiers (TraitType, ModifierId) VALUES
     ('TRAIT_LEADER_MNS_PROTECTION', 'MNS_ESTABLISHED_GOVERNOR_MARKER');
 
--- Reuse Liang's original structural-prevention modifier on the UNIQUE governor
--- objects, NOT on the player or a building. No shared promotion is modified.
+-- Validate Liang's original structural-prevention modifier before attaching it
+-- through private governor base promotions. No shared promotion is modified.
 -- No extra title is needed. Native governor establishment controls activation.
 -- Missing/overridden native definitions must be investigated, not hidden by Lua repairs.
 CREATE TEMP TABLE MNS_NativeProtectionRequired (Present INTEGER CHECK (Present = 1));
@@ -104,11 +106,37 @@ SELECT CASE WHEN CAST((SELECT Value FROM MNS_Settings WHERE Name='ProtectionEnab
  ) THEN 1 ELSE 0 END;
 DROP TABLE MNS_NativeProtectionRequired;
 
-INSERT INTO GovernorModifiers (GovernorType, ModifierId)
-SELECT m.UniqueGovernorType, 'REINFORCED_INFRASTRUCTURE_PREVENET_STRUCTURAL_DAMAGE'
-FROM MNS_GovernorReplacements m
+-- Native Liang uses GovernorPromotionModifiers, not GovernorModifiers. Give
+-- Minos private copies of the existing tree so the base ability can carry the
+-- same effect without granting it to other civilizations or adding a title.
+CREATE TEMP TABLE MNS_PromotionMap AS
+SELECT DISTINCT s.GovernorPromotion AS OriginalType, 'MNS_' || s.GovernorPromotion AS NewType
+FROM GovernorPromotionSets s JOIN MNS_GovernorReplacements m ON s.GovernorType=m.UniqueGovernorType;
+INSERT INTO Types (Type,Kind) SELECT NewType,'KIND_GOVERNOR_PROMOTION' FROM MNS_PromotionMap;
+CREATE TEMP TABLE MNS_CopyPromotions AS
+SELECT p.* FROM GovernorPromotions p JOIN MNS_PromotionMap m ON p.GovernorPromotionType=m.OriginalType;
+UPDATE MNS_CopyPromotions SET GovernorPromotionType=(SELECT NewType FROM MNS_PromotionMap WHERE OriginalType=GovernorPromotionType);
+INSERT INTO GovernorPromotions SELECT * FROM MNS_CopyPromotions;
+DROP TABLE MNS_CopyPromotions;
+INSERT INTO GovernorPromotionModifiers (GovernorPromotionType,ModifierId)
+SELECT m.NewType,p.ModifierId FROM GovernorPromotionModifiers p JOIN MNS_PromotionMap m ON p.GovernorPromotionType=m.OriginalType;
+INSERT INTO GovernorPromotionPrereqs (GovernorPromotionType,PrereqGovernorPromotion)
+SELECT m.NewType,COALESCE(n.NewType,p.PrereqGovernorPromotion)
+FROM GovernorPromotionPrereqs p JOIN MNS_PromotionMap m ON p.GovernorPromotionType=m.OriginalType
+LEFT JOIN MNS_PromotionMap n ON p.PrereqGovernorPromotion=n.OriginalType;
+INSERT INTO GovernorPromotionConditions (GovernorPromotionType,HiddenWithoutPrereqs,EarliestGameEra)
+SELECT m.NewType,p.HiddenWithoutPrereqs,p.EarliestGameEra
+FROM GovernorPromotionConditions p JOIN MNS_PromotionMap m ON p.GovernorPromotionType=m.OriginalType;
+UPDATE GovernorPromotionSets SET GovernorPromotion=(SELECT NewType FROM MNS_PromotionMap WHERE OriginalType=GovernorPromotion)
+WHERE GovernorType IN (SELECT UniqueGovernorType FROM MNS_GovernorReplacements);
+
+INSERT INTO GovernorPromotionModifiers (GovernorPromotionType, ModifierId)
+SELECT p.GovernorPromotionType, 'REINFORCED_INFRASTRUCTURE_PREVENET_STRUCTURAL_DAMAGE'
+FROM GovernorPromotions p JOIN MNS_PromotionMap m ON p.GovernorPromotionType=m.NewType
 WHERE CAST((SELECT Value FROM MNS_Settings WHERE Name='ProtectionEnabled') AS INTEGER)<>0
+  AND p.BaseAbility=1
   AND NOT EXISTS (
-    SELECT 1 FROM GovernorModifiers g WHERE g.GovernorType=m.UniqueGovernorType
+    SELECT 1 FROM GovernorPromotionModifiers g WHERE g.GovernorPromotionType=p.GovernorPromotionType
       AND g.ModifierId='REINFORCED_INFRASTRUCTURE_PREVENET_STRUCTURAL_DAMAGE'
   );
+DROP TABLE MNS_PromotionMap;

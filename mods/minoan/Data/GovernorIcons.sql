@@ -14,3 +14,8 @@ INSERT OR REPLACE INTO IconDefinitions (Name, Atlas, "Index")
     FROM IconDefinitions i JOIN MNS_GovernorIconMap m
     ON INSTR(i.Name, m.OriginalType) > 0;
 DROP TABLE MNS_GovernorIconMap;
+
+-- Private promotion trees retain the original promotion artwork.
+INSERT OR REPLACE INTO IconDefinitions (Name, Atlas, "Index")
+SELECT REPLACE(Name,'ICON_GOVERNOR_PROMOTION_','ICON_MNS_GOVERNOR_PROMOTION_'),Atlas,"Index"
+FROM IconDefinitions WHERE Name LIKE 'ICON_GOVERNOR_PROMOTION_%';

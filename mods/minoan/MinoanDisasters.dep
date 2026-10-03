@@ -1,0 +1,73 @@
+<?xml version='1.0' encoding='utf-8'?>
+<AssetObjects..GameDependencyData>
+  <ID>
+    <name text="MinoanDisasters" />
+    <id text="f4f56898-125b-43e1-953d-9d39c3c73e32" />
+  </ID>
+  <RequiredGameArtIDs>
+    <Element>
+      <name text="Civ6" />
+      <id text="cb2f71b7-843e-4af3-9ca7-992acda9c195" />
+    </Element>
+  </RequiredGameArtIDs>
+  <SystemDependencies>
+    <Element>
+      <ConsumerName text="Landmarks" />
+      <ArtDefDependencyPaths>
+        <Element text="Districts.artdef" />
+      </ArtDefDependencyPaths>
+      <LibraryDependencies />
+      <LoadsLibraries>true</LoadsLibraries>
+    </Element>
+    <Element>
+      <ConsumerName text="WorldView_Translate" />
+      <ArtDefDependencyPaths>
+        <Element text="Districts.artdef" />
+      </ArtDefDependencyPaths>
+      <LibraryDependencies />
+      <LoadsLibraries>true</LoadsLibraries>
+    </Element>
+    <Element>
+      <ConsumerName text="StrategicView_Translate" />
+      <ArtDefDependencyPaths>
+        <Element text="Districts.artdef" />
+      </ArtDefDependencyPaths>
+      <LibraryDependencies />
+      <LoadsLibraries>true</LoadsLibraries>
+    </Element>
+    <Element>
+      <ConsumerName text="StrategicView_Properties" />
+      <ArtDefDependencyPaths>
+        <Element text="Districts.artdef" />
+      </ArtDefDependencyPaths>
+      <LibraryDependencies />
+      <LoadsLibraries>true</LoadsLibraries>
+    </Element>
+    <Element>
+      <ConsumerName text="StrategicView_Sprite" />
+      <ArtDefDependencyPaths>
+        <Element text="Districts.artdef" />
+      </ArtDefDependencyPaths>
+      <LibraryDependencies />
+      <LoadsLibraries>true</LoadsLibraries>
+    </Element>
+    <Element>
+      <ConsumerName text="Audio" />
+      <ArtDefDependencyPaths>
+        <Element text="Districts.artdef" />
+      </ArtDefDependencyPaths>
+      <LibraryDependencies />
+      <LoadsLibraries>true</LoadsLibraries>
+    </Element>
+  </SystemDependencies>
+  <ArtDefDependencies>
+    <Element>
+      <ArtDefPath text="Districts.artdef" />
+      <ArtDefDependencyPaths>
+        <Element text="Landmarks.artdef" />
+        <Element text="StrategicView.artdef" />
+      </ArtDefDependencyPaths>
+    </Element>
+  </ArtDefDependencies>
+  <LibraryDependencies />
+</AssetObjects..GameDependencyData>

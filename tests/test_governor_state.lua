@@ -12,6 +12,13 @@ local function test(name,fn) fn(); count=count+1; print('PASS '..name) end
 test('nil city and absent native marker are not protected',function()
  eq(W.protected(nil),false);eq(W.protected(city),false)
 end)
+
+test('native getter returning no Lua values is not protected',function()
+ local getter=city.GetProperty
+ city.GetProperty=function()end
+ eq(W.protected(city),false)
+ city.GetProperty=getter
+end)
 test('old assignment timer never activates protection',function()
  F.turn=100;city:SetProperty('MNS_Assignment',{governor=99,turn=0})
  eq(W.protected(city),false)
@@ -73,9 +80,9 @@ Players[1].GetGovernors=function()return api end
 test('diagnostic accepts all seven one-to-one engine-filtered pairs',function()
  eq(#W.governorRosterIssues(0),0)
 end)
-test('diagnostic detects engine honoring only first replacement',function()
+test('diagnostic tolerates originals that are filtered by the native panel extension',function()
  for i=2,7 do allowed[i]=true end
- eq(#W.governorRosterIssues(0),6)
+ eq(#W.governorRosterIssues(0),0)
  for i=2,7 do allowed[i]=false end
 end)
 test('diagnostic detects unavailable clone',function()
@@ -91,5 +98,22 @@ test('diagnostic catches variant leakage into other civilization',function()
 end)
 test('diagnostic does not count other civilization own unique replacements as an error',function()
  allowed[1]=false;eq(#W.governorRosterIssues(1),0)
+end)
+test('native panel hides original candidates only for Minos, preserving variants',function()
+ local added=0
+ include=function(name)eq(name,'GovernorPanel');AddGovernorCandidate=function()added=added+1 end end
+ Game.GetLocalPlayer=function()return 0 end
+ local leader='LEADER_MNS_MINOS'
+ PlayerConfigurations[0].GetLeaderTypeName=function()return leader end
+ for _,row in ipairs(rows)do GameInfo.MNS_GovernorReplacements[row.OriginalGovernorType]=row end
+ dofile(root..'/mods/minoan/UI/MNS_GovernorPanel.lua')
+ for _,row in ipairs(rows)do
+  AddGovernorCandidate({GovernorType=row.OriginalGovernorType},true)
+  AddGovernorCandidate({GovernorType=row.UniqueGovernorType},true)
+ end
+ eq(added,7)
+ leader='LEADER_OTHER'
+ for _,row in ipairs(rows)do AddGovernorCandidate({GovernorType=row.OriginalGovernorType},true)end
+ eq(added,14)
 end)
 print(count..' governor state/diagnostic mock tests passed (not a game-runtime test)')

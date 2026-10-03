@@ -39,6 +39,28 @@
     </UpdateColors>
   </FrontEndActions>
   <InGameActions>
+    <ReplaceUIScript id="MNS_NaturalDisasterPopup">
+      <Properties>
+        <LoadOrder>2100</LoadOrder>
+        <LuaContext>NaturalDisasterPopup</LuaContext>
+        <LuaReplace>UI/MNS_NaturalDisasterPopup.lua</LuaReplace>
+      </Properties>
+    </ReplaceUIScript>
+    <UpdateDatabase id="MNS_UnitProtection">
+      <Properties><LoadOrder>2200</LoadOrder></Properties>
+      <File>Data/UnitProtection.sql</File>
+    </UpdateDatabase>
+    <UpdateArt id="MNS_Sanctuary_Art">
+      <Properties><LoadOrder>2000</LoadOrder></Properties>
+      <File>MinoanDisasters.dep</File>
+    </UpdateArt>
+    <ReplaceUIScript id="MNS_GovernorPanel">
+      <Properties>
+        <LoadOrder>2100</LoadOrder>
+        <LuaContext>GovernorPanel</LuaContext>
+        <LuaReplace>UI/MNS_GovernorPanel.lua</LuaReplace>
+      </Properties>
+    </ReplaceUIScript>
     <UpdateText id="MNS_Game_Text">
       <Properties>
         <LoadOrder>2000</LoadOrder>
@@ -92,6 +114,11 @@
     </UpdateColors>
   </InGameActions>
   <Files>
+    <File>UI/MNS_NaturalDisasterPopup.lua</File>
+    <File>Data/UnitProtection.sql</File>
+    <File>ArtDefs/Districts.artdef</File>
+    <File>MinoanDisasters.dep</File>
+    <File>UI/MNS_GovernorPanel.lua</File>
     <File>Config/Balance.sql</File>
     <File>Data/Civilization.sql</File>
     <File>Data/Configuration.sql</File>

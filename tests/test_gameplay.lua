@@ -34,6 +34,8 @@ test('disaster bracket compensates population but NEVER repairs any structures',
   F.cities[1].pop=3
  end
  GameEvents.MNS_Action.fire(0,{Action='Cast',UnitID=oracle.id,PlotID=1})
+ eq(F.applyCount,0);assert(p:GetProperty('MNS_ScheduledCast'))
+ F.turn=F.turn+1;Events.PlayerTurnActivated.fire(0)
  eq(city.pop,8);eq(city.buildings.pillaged,true);eq(city.district.pillaged,true)
  eq(city.district.damage[0],70);eq(city.district.damage[1],80)
  eq(F.plots[1].improvement,-1);eq(F.plots[1].pillaged,false)
@@ -81,9 +83,16 @@ test('peace blocks comet; war permits it; no economic reward',function()
  local n=F.applyCount
  GameEvents.MNS_Action.fire(0,{Action='Cast',UnitID=prophet.id,PlotID=3});eq(F.applyCount,n)
  F.war=true;F.footprint={3};F.disasterDamage=nil
+ p.culture.current=-1;p.science.current=-1 -- keep existing bank untouched by next-turn research flushing
  local old=p:GetProperty('MNS_Knowledge')
  GameEvents.MNS_Action.fire(0,{Action='Cast',UnitID=prophet.id,PlotID=3})
- eq(F.applyCount,n+1);eq(p.units.items[prophet.id],nil)
+ eq(F.applyCount,n);F.turn=F.turn+1;Events.PlayerTurnActivated.fire(0)
+ eq(F.applyCount,n+1);eq(prophet:GetProperty('MNS_Retire'),true)
+ assert(p.units.items[prophet.id]) -- keep the object alive until UI clears selection
+ GameEvents.MNS_Action.fire(0,{Action='Retire',UnitID=oracle.id})
+ assert(p.units.items[oracle.id]) -- cannot retire a unit with charges remaining
+ GameEvents.MNS_Action.fire(0,{Action='Retire',UnitID=prophet.id})
+ eq(p.units.items[prophet.id],nil)
  eq(p:GetProperty('MNS_Knowledge').science,old.science)
  eq(p:GetProperty('MNS_Knowledge').culture,old.culture)
 end)

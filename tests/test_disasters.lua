@@ -184,4 +184,56 @@ test('population compensation does not delete natural growth',function(F,W,P)
     local c=F.cities[0];F.setEstablished(c,true);local all=P.capture();c.pop=10
     P.restore(all,{1});eq(c.pop,10)
 end)
+test('sanctuary works with gameplay location lookup despite string GetDistrict returning nil',function(F,W)
+ local city=F.cities[0]
+ eq(city:GetDistricts():GetDistrict('DISTRICT_MNS_SANCTUARY'),nil)
+ city.district.pillaged=false;eq(W.sanctuary(city),true)
+ city.district.pillaged=true;eq(W.sanctuary(city),false)
+ city.district.pillaged=false;city.district.IsComplete=function()return false end
+ eq(W.sanctuary(city),false)
+end)
+
+test('different flood origin confirms only when event type and requested footprint match',function(F,W)
+ local pending={eventType=0,x=1,y=0}
+ eq(W.invocationMatches(pending,0,2,0,{1,2}),true)
+ eq(W.invocationMatches(pending,0,2,0,{2}),false)
+ eq(W.invocationMatches(pending,1,2,0,{1,2}),false)
+end)
+
+test('unconfirmed automatic and manual waits expire without same-turn retry',function(F)
+ dofile(root..'/mods/minoan/Gameplay/MNS_Gameplay.lua')
+ F.settings.AutoDisastersEnabled='1';F.turn=8
+ GameRandomEvents.ApplyEvent=function()F.applyCount=F.applyCount+1 end
+ Events.PlayerTurnActivated.fire(0)
+ eq(F.applyCount,1);assert(Game:GetProperty('MNS_PendingInvocation'))
+ Events.PlayerTurnActivated.fire(0);eq(F.applyCount,1)
+ F.turn=9;Events.PlayerTurnActivated.fire(0)
+ eq(F.applyCount,1);eq(Game:GetProperty('MNS_PendingInvocation'),nil)
+ eq(Players[0]:GetProperty('MNS_DisasterAudit').unconfirmed,1)
+ F.turn=10;Events.PlayerTurnActivated.fire(0);eq(F.applyCount,2)
+ local pending=Game:GetProperty('MNS_PendingInvocation');pending.unitID=99
+ Game:SetProperty('MNS_PendingInvocation',pending)
+ F.turn=20;Events.PlayerTurnActivated.fire(0)
+ eq(F.applyCount,3);eq(Game:GetProperty('MNS_PendingInvocation').unitID,nil)
+end)
+test('volcano and comet require the requested origin, not adjacent footprint',function(F,W)
+ for _,name in ipairs{'RANDOM_EVENT_VOLCANO_GENTLE','RANDOM_EVENT_COMET_STRIKE'} do
+  GameInfo.RandomEvents[0].RandomEventType=name
+  eq(W.invocationMatches({eventType=0,x=1,y=0},0,2,0,{1,2}),false)
+  eq(W.invocationMatches({eventType=0,x=1,y=0},0,1,0,{1,2}),true)
+ end
+end)
+test('missing scope APIs and invalid callback coordinates never fabricate an area',function(F,W)
+ GameClimate={};RiverManager={}
+ for _,op in ipairs{'STORM','FLOODPLAIN','DROUGHT','VOLCANO','FIRE','COMET_STRIKE'} do
+  local d={RandomEventType='RANDOM_EVENT_'..op,EffectOperatorType=op}
+  eq(#W.affected(d,1,0,-1),1)
+  eq(#W.affected(d,-99,0,-1),0)
+ end
+end)
+test('city-targeted comet is not offered on ordinary land',function(F,W)
+ GameInfo.RandomEvents[1].TargetCities=true
+ eq(#W.options(F.plots[1],true),0)
+ eq(#W.options(F.plots[3],true),1)
+end)
 print(count..' cultivation/native-boundary tests passed (not a game-runtime test)')

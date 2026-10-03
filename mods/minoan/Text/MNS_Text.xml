@@ -44,10 +44,10 @@
       <Text>Palatial Shelter</Text>
     </Replace>
     <Replace Tag="LOC_MNS_LEADER_ABILITY_DESCRIPTION" Language="zh_Hans_CN">
-      <Text>开局额外获得总督头衔，默认1个，由你自行任命。七位专属总督沿用原名、肖像和晋升，默认目标两回合就位，并接入梁的原生结构防护。Lua只补受灾人口；受庇护城市按信仰获一次性科文。其他文明总督不变。原生防护仍需实测。</Text>
+      <Text>所有己方单位免受自然灾害的单位伤害，包括作战单位、开拓者和建造者，不限国境且不要求总督。开局额外获得总督头衔，默认1个，由你自行任命。七位专属总督沿用原名、肖像和晋升，默认目标两回合就位，并接入梁的原生结构防护。Lua只补受灾人口；受庇护城市按信仰获一次性科文。其他文明总督不变。特殊毁图效果及新增防护范围仍需实测。</Text>
     </Replace>
     <Replace Tag="LOC_MNS_LEADER_ABILITY_DESCRIPTION" Language="en_US">
-      <Text>Receive bonus Governor Titles at game start (default: one); you choose the appointment. Seven unique governors retain original names, portraits and promotions, with a two-turn establishment target and native Liang structural prevention. Lua compensates disaster population losses only; protected cities receive Faith-based knowledge. Other civilizations are unchanged. Native behavior requires in-game testing.</Text>
+      <Text>All your units are protected from random-event unit damage, including military units, Settlers and Builders, regardless of territory or governors. Receive bonus Governor Titles at game start (default: one). Seven unique governors retain original names, portraits and promotions, with a two-turn establishment target and native Liang structural prevention. Lua compensates disaster population losses only; protected cities receive Faith-based knowledge. Other civilizations are unchanged. Special map destruction and new protection coverage require in-game testing.</Text>
     </Replace>
     <Replace Tag="LOC_MNS_SANCTUARY_NAME" Language="zh_Hans_CN">
       <Text>峰顶圣所</Text>

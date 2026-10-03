@@ -26,7 +26,16 @@ function W.plotCity(plot)
 end
 function W.sanctuary(city)
     local def = GameInfo.Districts['DISTRICT_MNS_SANCTUARY']
-    local d = def and city:GetDistricts():GetDistrict(def.Index)
+    if not def or not city then return false end
+    local districts, d = city:GetDistricts(), nil
+    if districts.GetDistrictLocation and districts.GetDistrictAtLocation then
+        -- Gameplay exposes location-based district lookup (BlackDeathScenario).
+        -- Its GetDistrict(string) does not behave like the UI method.
+        local x, y = districts:GetDistrictLocation(def.Index)
+        if x and y and x >= 0 and y >= 0 then d = districts:GetDistrictAtLocation(x, y) end
+    else
+        d = districts:GetDistrict(def.DistrictType)
+    end
     return d and d:IsComplete() and not d:IsPillaged() or false
 end
 function W.governor(city)
@@ -38,11 +47,11 @@ function W.protected(city)
     if not city or not W.enabled('ProtectionEnabled') or not W.minoan(city:GetOwner()) then return false end
     -- Set and removed by the native, non-Permanent trait modifier. Never write
     -- this property in Lua, and never infer establishment from elapsed turns.
-    return (tonumber(city:GetProperty('MNS_GovernorEstablished')) or 0) > 0
+    return (tonumber(city:GetProperty('MNS_GovernorEstablished') or 0) or 0) > 0
 end
 
--- Read-only UI diagnostic: verifies the engine's actual appointment filtering,
--- not merely that seven GovernorReplaces rows exist. nil means not ready/UI-only.
+-- Check variant availability. This engine also allows originals; the native
+-- GovernorPanel extension hides those candidates for Minos. nil means UI not ready.
 function W.governorRosterIssues(playerID)
     local player = Players[playerID]
     if not player or not player.GetGovernors or not GameInfo.MNS_GovernorReplacements then return nil end
@@ -59,9 +68,9 @@ function W.governorRosterIssues(playerID)
         else
             local originalAllowed = governors:CanEverAppointGovernor(old.Hash)
             local uniqueAllowed = governors:CanEverAppointGovernor(new.Hash)
-            if ours and (originalAllowed or not uniqueAllowed) then
+            if ours and not uniqueAllowed then
                 issues[#issues+1] = row.OriginalGovernorType .. ': original=' .. tostring(originalAllowed)
-                    .. ', minoan=' .. tostring(uniqueAllowed) .. ' (expected false, true)'
+                    .. ', minoan=' .. tostring(uniqueAllowed) .. ' (Minoan candidate must be available)'
             elseif not ours and uniqueAllowed then
                 issues[#issues+1] = 'Minoan governor available to another civilization: ' .. row.UniqueGovernorType
             end
@@ -76,6 +85,18 @@ function W.governorRosterIssues(playerID)
 end
 function W.unitRole(unit)
     return unit and unit:GetProperty('MNS_Role') or nil
+end
+function W.invocationMatches(pending, eventType, x, y, affected)
+    if not pending or pending.eventType ~= eventType then return false end
+    if pending.x == x and pending.y == y then return true end
+    local family=W.eventFamily(GameInfo.RandomEvents[eventType])
+    if family=='volcano' or family=='comet' then return false end
+    -- Flood callbacks can identify another tile of the same river.
+    local requested = Map.GetPlot(pending.x, pending.y)
+    for _, plotID in ipairs(affected or {}) do
+        if requested and requested:GetIndex() == plotID then return true end
+    end
+    return false
 end
 function W.price(player, role)
     local count = player:GetProperty('MNS_Bought_' .. role) or 0
@@ -186,6 +207,7 @@ function W.options(plot, offensive)
         local valid = false
         if offensive then
             valid = W.isComet(def) and (W.enabled('CometAllowsCityCenter') or not plot:IsCity())
+                and (not flag(def.TargetCities) or plot:IsCity())
         elseif family == 'volcano' and W.enabled('VolcanoEnabled') then
             valid = f == 'FEATURE_VOLCANO'
         elseif (family == 'forest' or family == 'jungle') and W.enabled('FireEnabled') then
@@ -207,6 +229,20 @@ function W.options(plot, offensive)
     end
     table.sort(out, function(a,b) return a.Index < b.Index end)
     return out
+end
+function W.volcanoType(plot)
+    if not plot or not MapFeatureManager or not MapFeatureManager.GetNamedVolcanoes
+        or not GameInfo.NamedVolcanoes then return nil end
+    -- Native MapLabelManager exposes coordinates and Name in these records.
+    for _,volcano in pairs(MapFeatureManager.GetNamedVolcanoes() or {}) do
+        if volcano.PlotX==plot:GetX() and volcano.PlotY==plot:GetY() then
+            for def in GameInfo.NamedVolcanoes() do
+                if def.Name==volcano.Name or (Locale and Locale.Lookup and Locale.Lookup(def.Name)==volcano.Name) then
+                    return def.Index
+                end
+            end
+        end
+    end
 end
 function W.cometAvailable()
     for d in GameInfo.RandomEvents() do
@@ -245,23 +281,25 @@ function W.validateCast(playerID, unit, plot)
 end
 -- Resolve actual footprints using native event-specific APIs, not a guessed radius.
 function W.affected(def, x, y, eventID)
+    local origin=x and y and Map.GetPlot(x,y)
+    if not origin then return {} end
     local f = W.eventFamily(def)
     local plots
-    if f == 'flood' then
+    if f == 'flood' and RiverManager and RiverManager.GetRiverForFloodplain and RiverManager.GetFloodplainPlots then
         local river = RiverManager.GetRiverForFloodplain(x,y)
         if river and river >= 0 then plots = RiverManager.GetFloodplainPlots(river) end
-    elseif def.EffectOperatorType == 'STORM' then
+    elseif def.EffectOperatorType == 'STORM' and GameClimate and GameClimate.GetActiveStormIDAtPlot and GameClimate.GetStormPlotsByID then
         local storm = GameClimate.GetActiveStormIDAtPlot(x,y)
         if storm and storm >= 0 then plots = GameClimate.GetStormPlotsByID(storm) end
-    elseif f == 'drought' then
+    elseif f == 'drought' and GameClimate and GameClimate.GetActiveDroughtIDAtPlot and GameClimate.GetDroughtPlotsByID then
         local drought = GameClimate.GetActiveDroughtIDAtPlot(x,y)
         if drought and drought >= 0 then plots = GameClimate.GetDroughtPlotsByID(drought) end
     end
     if not plots or #plots == 0 then
-        if eventID and GameClimate.GetOneOffPlotsByID then plots = GameClimate.GetOneOffPlotsByID(eventID) end
+        if eventID and eventID>=0 and GameClimate and GameClimate.GetOneOffPlotsByID then plots = GameClimate.GetOneOffPlotsByID(eventID) end
     end
     -- Safe conservative fallback: report only the start tile, never an invented blast radius.
-    if not plots or #plots == 0 then plots = {Map.GetPlot(x,y):GetIndex()} end
+    if not plots or #plots == 0 then plots = {origin:GetIndex()} end
     local ids, seen = {}, {}
     for _,v in ipairs(plots) do
         local id = type(v) == 'number' and v or (v.GetIndex and v:GetIndex())

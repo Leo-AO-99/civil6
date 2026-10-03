@@ -1,30 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Context Name="MNS_Panel">
-  <Grid ID="Panel" Anchor="L,T" Offset="12,180" Size="370,430" Style="Grid9DetailFive140">
-    <Label ID="Title" Anchor="L,T" Offset="16,12" String="米诺斯 · 天灾面板（测试版）" Font="BodyText"/>
-    <Button ID="Toggle" Anchor="R,T" Offset="12,8" Size="48,28" Style="BaseButton">
-      <Label Anchor="C,C" String="收起"/>
-    </Button>
-    <Container ID="Body" Anchor="L,T" Offset="12,44" Size="346,376">
-      <Label ID="Summary" Anchor="L,T" Offset="0,0" Size="342,64" WrapWidth="340" Font="BodyText"/>
-      <Button ID="BuyOracle" Anchor="L,T" Offset="0,72" Size="342,30" Style="BaseButton">
-        <Label ID="BuyOracleText" Anchor="C,C" String="购买神谕祭司"/>
-      </Button>
-      <Button ID="BuyProphet" Anchor="L,T" Offset="0,108" Size="342,30" Style="BaseButton">
-        <Label ID="BuyProphetText" Anchor="C,C" String="购买末日先知"/>
-      </Button>
-      <Label ID="UnitInfo" Anchor="L,T" Offset="0,148" Size="342,44" WrapWidth="340" Font="BodyText"/>
-      <Button ID="Previous" Anchor="L,T" Offset="0,198" Size="48,30" Style="BaseButton">
-        <Label Anchor="C,C" String="上一格"/>
-      </Button>
-      <Label ID="Target" Anchor="L,T" Offset="58,196" Size="224,52" WrapWidth="222" Font="BodyText"/>
-      <Button ID="Next" Anchor="R,T" Offset="0,198" Size="48,30" Style="BaseButton">
-        <Label Anchor="C,C" String="下一格"/>
-      </Button>
-      <Button ID="Cast" Anchor="L,T" Offset="0,252" Size="342,32" Style="BaseButton">
-        <Label ID="CastText" Anchor="C,C" String="在此祈灾"/>
-      </Button>
-      <Label ID="Status" Anchor="L,T" Offset="0,298" Size="342,74" WrapWidth="340" Font="BodyText"/>
-    </Container>
+  <!-- Attached to the city's Faith list; never floats over the map. -->
+  <Stack ID="FaithPurchases" Size="320,auto" StackGrowth="Down" StackPadding="4" Hidden="1">
+    <Label String="米诺斯祭司" Style="WhiteSemiBold14" Size="320,24"/>
+    <GridButton ID="BuyOracle" Size="320,56" Style="ProductionButton" ConsumeMouse="1">
+      <Image ID="OracleIcon" Anchor="L,C" Offset="8,0" Size="38,38"/>
+      <Label String="神谕祭司" Style="WhiteSemiBold14" Anchor="L,C" Offset="56,0"/>
+      <Label ID="OracleCost" Style="WhiteSemiBold14" Anchor="R,C" Offset="8,0"/>
+    </GridButton>
+    <GridButton ID="BuyProphet" Size="320,56" Style="ProductionButton" ConsumeMouse="1">
+      <Image ID="ProphetIcon" Anchor="L,C" Offset="8,0" Size="38,38"/>
+      <Label String="末日先知" Style="WhiteSemiBold14" Anchor="L,C" Offset="56,0"/>
+      <Label ID="ProphetCost" Style="WhiteSemiBold14" Anchor="R,C" Offset="8,0"/>
+    </GridButton>
+    <Label ID="PurchaseStatus" Style="WhiteSemiBold14" WrapWidth="310" Size="320,auto"/>
+  </Stack>
+  <Button ID="PriestAction" Size="44,53" Texture="UnitPanel_ActionButton" Hidden="1" ConsumeMouse="1">
+    <Image ID="PriestIcon" Anchor="C,C" Offset="0,-2" Size="38,38"/>
+  </Button>
+  <!-- Opened only through the selected priest's action button. -->
+  <Grid ID="TargetPicker" Anchor="R,B" Offset="172,235" Size="320,290" Style="DecoFrame" Hidden="1" ConsumeMouse="1">
+    <Box Size="parent,parent" Color="8,34,56,255" ConsumeMouse="1"/>
+    <Label ID="UnitInfo" Anchor="L,T" Offset="10,12" Style="WhiteSemiBold14" WrapWidth="270"/>
+    <Button ID="ClosePicker" Anchor="R,T" Offset="6,6" Size="24,24" Texture="Controls_CloseButton" ToolTip="关闭"/>
+    <GridButton ID="Previous" Anchor="L,T" Offset="10,66" Size="52,28" Style="ProductionButton" ConsumeMouse="1">
+      <Label Anchor="C,C" String="上一格" Style="WhiteSemiBold14"/>
+    </GridButton>
+    <Label ID="Target" Anchor="C,T" Offset="0,65" Style="WhiteSemiBold14" WrapWidth="178"/>
+    <GridButton ID="Next" Anchor="R,T" Offset="10,66" Size="52,28" Style="ProductionButton" ConsumeMouse="1">
+      <Label Anchor="C,C" String="下一格" Style="WhiteSemiBold14"/>
+    </GridButton>
+    <GridButton ID="DisasterPrevious" Anchor="L,T" Offset="10,108" Size="40,32" Style="ProductionButton" ConsumeMouse="1">
+      <Label Anchor="C,C" String="&lt;" Style="WhiteSemiBold14"/>
+    </GridButton>
+    <Label ID="DisasterName" Anchor="C,T" Offset="0,108" Style="WhiteSemiBold14" WrapWidth="210"/>
+    <GridButton ID="DisasterNext" Anchor="R,T" Offset="10,108" Size="40,32" Style="ProductionButton" ConsumeMouse="1">
+      <Label Anchor="C,C" String="&gt;" Style="WhiteSemiBold14"/>
+    </GridButton>
+    <GridButton ID="Cast" Anchor="L,T" Offset="10,163" Size="300,36" Style="ProductionButton" ConsumeMouse="1">
+      <Label ID="CastText" Anchor="C,C" Style="WhiteSemiBold14"/>
+    </GridButton>
+    <Label ID="Status" Anchor="L,T" Offset="10,210" Style="WhiteSemiBold14" WrapWidth="298"/>
   </Grid>
 </Context>

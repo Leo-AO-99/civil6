@@ -62,4 +62,18 @@ BBS仅作代码参考，不是依赖，不能据此保证默认或所有自定�
 Windows手动Mod安装目录的作者说明：
 https://github.com/d-jackthenarrator/Civ6-BBS
 
-本版无真实游戏或 DebugGameplay.sqlite 测试，SQL夹具只验证定义与绑定。
+以上 Alpha 4 初版记录只包含 SQL 夹具。后续已有用户实机日志与真实 DebugGameplay.sqlite 读取，具体新证据见下文，不能将初版测试说明当成当前所有功能的状态。
+
+## 2026-10-02 本机适配与原版参考
+
+本机游戏版本 1.0.12.68 (1023995)，Expansion2。原版文件优先于跨上下文推测：
+
+- `DLC/Expansion2/UI/Additions/GovernorPanel.lua`：`Refresh` 使用全局 `AddGovernorCandidate` 构建未任命候选；扩展只过滤本领袖的七个原版候选，保留原版面板及已任命总督。
+- `DLC/Expansion2/Expansion2.modinfo`：`ReplaceUIScript` 使用 `LuaContext` 与 `LuaReplace` Properties。
+- `DLC/BlackDeathScenario/Scripts/BlackDeathScenario.lua`：Gameplay 使用 `GetDistrictLocation(GameInfo.Districts[type].Index)`；位置定位后通过 `GetDistrictAtLocation(x,y)` 取得区域。原版 UI 的 `GetDistrict(string)` 不能直接推定 Gameplay 行为一致。
+- `Base/ArtDefs/Districts.artdef`（实际路径 `Base/ArtDefs` 或本机 `Base/ArtDefs` 的大小写等价路径）、`Base/Civ6.dep`：本模组只为特色区域创建原版圣地记录的别名，继续引用原有 Landmark、StrategicView 与 Audio。基础美术 UUID 为 `cb2f71b7-843e-4af3-9ca7-992acda9c195`，与资料片模组依赖 UUID 不混用。
+- `DLC/Expansion2/UI/Additions/NaturalDisasterPopup.lua`：原生灾害事件签名含类型、严重性、x/y、减灾、事件 ID 和回放 ID；本局 Gameplay 回调未提供后几个参数，不能假设与 UI 参数完全相同。
+- `Debug/Random Events.ltp`：官方 FireTuner 脚本使用 `GameRandomEvents.ApplyEvent`，参数为 `EventType`、`Location`、`NamedRiver`、`NamedVolcano`。该源码支持显式 Location；不能笼统宣称 Location 对普通灾害无效。
+- 社区接口表：[CityDistricts](https://sukritact.github.io/Civilization-VI-Modding-Knowledge-Base/CityDistricts)、[GameRandomEvents](https://sukritact.github.io/Civilization-VI-Modding-Knowledge-Base/GameRandomEvents)、[PlayerCulture](https://sukritact.github.io/Civilization-VI-Modding-Knowledge-Base/PlayerCulture)。用来核对 UI/Gameplay 范围，未代替本机测试。
+
+实际日志证据：总督七对数据库记录存在但原版和专属皆可任命；Oracle 的16次请求进入 Gameplay 后被圣所校验拒绝；自动灾害提交一次后未被旧坐标匹配确认；原生自然事件与一笔 0.50 科学/0.50 文化入库已有记录。新美术、候选过滤、购买修复及调度恢复仅完成代码验证和安装，尚无新一局效果证据。

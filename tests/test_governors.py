@@ -111,12 +111,12 @@ CREATE TABLE TraitModifiers(TraitType TEXT REFERENCES Traits(TraitType),
 
 
 def load_mod(db: sqlite3.Connection, strength: str = '250', protection: str = '1') -> None:
-    db.executescript((MOD / 'Config/Balance.sql').read_text())
+    db.executescript((MOD / 'Config/Balance.sql').read_text(encoding='utf-8'))
     db.execute("UPDATE MNS_Settings SET Value=? WHERE Name='MinoanGovernorTransitionStrength'", (strength,))
     db.execute("UPDATE MNS_Settings SET Value=? WHERE Name='ProtectionEnabled'", (protection,))
     db.execute('INSERT INTO Types VALUES(?,?)', (TRAIT, 'KIND_TRAIT'))
     db.execute('INSERT INTO Traits VALUES(?,?,?)', (TRAIT, 'name', 'description'))
-    db.executescript((MOD / 'Data/Governors.sql').read_text())
+    db.executescript((MOD / 'Data/Governors.sql').read_text(encoding='utf-8'))
 
 
 class GovernorSQLTests(unittest.TestCase):
@@ -160,30 +160,36 @@ class GovernorSQLTests(unittest.TestCase):
         self.assertEqual(set(self.db.execute('SELECT * FROM GovernorReplaces')), {(n, o) for o, n in PAIRS})
         self.assertEqual(self.db.execute('SELECT MAX(n) FROM (SELECT COUNT(*) n FROM GovernorReplaces GROUP BY UniqueGovernorType)').fetchone()[0], 1)
 
-    def test_shared_promotion_sets_preserve_skill_trees(self):
+    def test_private_promotion_sets_preserve_skill_trees(self):
         for old, new in PAIRS:
-            self.assertEqual([r[1] for r in self.rows('GovernorPromotionSets', old)],
+            self.assertEqual(['MNS_' + r[1] for r in self.rows('GovernorPromotionSets', old)],
                              [r[1] for r in self.rows('GovernorPromotionSets', new)])
         for table, before in self.unchanged_tables.items():
-            self.assertEqual(self.db.execute(f'SELECT * FROM {table}').fetchall(), before)
+            self.assertEqual(self.db.execute(f"SELECT * FROM {table} WHERE GovernorPromotionType NOT LIKE 'MNS_%'").fetchall(), before)
 
     def test_governor_level_modifiers_copied(self):
         for old, new in PAIRS:
-            self.assertEqual({r[1] for r in self.rows('GovernorModifiers', old)} | {NATIVE_PROTECTION},
+            self.assertEqual({r[1] for r in self.rows('GovernorModifiers', old)},
                              {r[1] for r in self.rows('GovernorModifiers', new)})
 
-    def test_native_structural_prevention_bound_only_to_seven_variants(self):
-        actual = set(self.db.execute('SELECT GovernorType FROM GovernorModifiers WHERE ModifierId=?', (NATIVE_PROTECTION,)))
-        self.assertEqual(actual, {(n,) for _, n in PAIRS})
-        self.assertEqual(dict(self.db.execute('SELECT Name,Value FROM ModifierArguments WHERE ModifierId=?', (NATIVE_PROTECTION,))), {'Prevent': '1'})
-        # No cloning or editing of the shared original Liang promotion.
-        self.assertEqual(self.db.execute('SELECT GovernorPromotionType FROM GovernorPromotionModifiers WHERE ModifierId=?', (NATIVE_PROTECTION,)).fetchall(), [('GOVERNOR_THE_BUILDER_PROMOTION_3',)])
+    def test_native_structural_prevention_bound_only_to_private_base_promotions(self):
+        bases = self.db.execute("SELECT s.GovernorType,p.GovernorPromotionType FROM GovernorPromotionSets s JOIN GovernorPromotions p ON p.GovernorPromotionType=s.GovernorPromotion WHERE s.GovernorType LIKE 'GOVERNOR_MNS_%' AND p.BaseAbility=1").fetchall()
+        self.assertEqual(len(bases), 7)
+        for governor, promotion in bases:
+            self.assertEqual(self.db.execute('SELECT COUNT(*) FROM GovernorPromotionModifiers WHERE GovernorPromotionType=? AND ModifierId=?', (promotion,NATIVE_PROTECTION)).fetchone()[0],1)
+        self.assertEqual(self.db.execute('SELECT COUNT(*) FROM GovernorModifiers WHERE ModifierId=?',(NATIVE_PROTECTION,)).fetchone()[0],0)
+        for table, before in self.unchanged_tables.items():
+            self.assertEqual(self.db.execute(f"SELECT * FROM {table} WHERE GovernorPromotionType NOT LIKE 'MNS_%'").fetchall(), before)
+        original = self.db.execute("SELECT * FROM GovernorPromotionPrereqs WHERE GovernorPromotionType NOT LIKE 'MNS_%'").fetchall()
+        for promo, prereq in original:
+            if self.db.execute('SELECT 1 FROM GovernorPromotions WHERE GovernorPromotionType=?',('MNS_'+promo,)).fetchone():
+                self.assertIsNotNone(self.db.execute('SELECT 1 FROM GovernorPromotionPrereqs WHERE GovernorPromotionType=? AND PrereqGovernorPromotion=?',('MNS_'+promo,'MNS_'+prereq)).fetchone())
 
     def test_disabled_protection_does_not_bind_extra_native_effect(self):
         db = sqlite3.connect(':memory:'); self.addCleanup(db.close)
         seed_governors(db); load_mod(db, protection='0')
         self.assertEqual(db.execute('SELECT COUNT(*) FROM GovernorModifiers WHERE ModifierId=?', (NATIVE_PROTECTION,)).fetchone()[0], 0)
-        self.assertEqual(db.execute('SELECT COUNT(*) FROM GovernorPromotionModifiers WHERE ModifierId=?', (NATIVE_PROTECTION,)).fetchone()[0], 1)
+        self.assertEqual(db.execute('SELECT COUNT(*) FROM GovernorPromotionModifiers WHERE ModifierId=?', (NATIVE_PROTECTION,)).fetchone()[0], 2)
 
     def test_missing_or_changed_native_contract_is_not_silently_repaired(self):
         for change in (
@@ -250,14 +256,14 @@ class GovernorSQLTests(unittest.TestCase):
                 db.execute('INSERT INTO IconDefinitions VALUES(?,?,?)', row); before.append(row)
         # An unrelated original and a new-style icon with a prefix also survive.
         db.execute("INSERT INTO IconDefinitions VALUES('ICON_GOVERNOR_OTHER_MOD','other',77)")
-        db.executescript((MOD / 'Data/GovernorIcons.sql').read_text())
+        db.executescript((MOD / 'Data/GovernorIcons.sql').read_text(encoding='utf-8'))
         self.assertEqual(db.execute('SELECT COUNT(*) FROM IconDefinitions').fetchone()[0], len(before) * 2 + 1)
         for row in before:
             self.assertEqual(db.execute('SELECT * FROM IconDefinitions WHERE Name=?', (row[0],)).fetchone(), row)
             clone = row[0].replace('GOVERNOR_', 'GOVERNOR_MNS_')
             self.assertEqual(db.execute('SELECT Atlas,"Index" FROM IconDefinitions WHERE Name=?', (clone,)).fetchone(), row[1:])
         # Re-loading icon actions is harmless, and creates no second-level clones.
-        db.executescript((MOD / 'Data/GovernorIcons.sql').read_text())
+        db.executescript((MOD / 'Data/GovernorIcons.sql').read_text(encoding='utf-8'))
         self.assertEqual(db.execute('SELECT COUNT(*) FROM IconDefinitions').fetchone()[0], len(before) * 2 + 1)
 
 

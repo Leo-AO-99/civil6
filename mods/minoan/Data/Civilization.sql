@@ -42,9 +42,11 @@ CREATE TEMP TABLE MNS_StartupSettings (
     FloodplainTier INTEGER NOT NULL CHECK(TYPEOF(FloodplainTier)='integer' AND FloodplainTier BETWEEN 0 AND 5)
 );
 INSERT INTO MNS_StartupSettings VALUES (
-    (SELECT Value FROM MNS_Settings WHERE Name='StartingGovernorTitles'),
-    (SELECT Value FROM MNS_Settings WHERE Name='VolcanoStartBiasTier'),
-    (SELECT Value FROM MNS_Settings WHERE Name='FloodplainStartBiasTier')
+    -- Civ VI checks TYPEOF before applying INTEGER column affinity. Convert
+    -- valid integer settings explicitly; invalid values still fail NOT NULL.
+    (SELECT CASE WHEN Value = CAST(Value AS INTEGER) THEN CAST(Value AS INTEGER) END FROM MNS_Settings WHERE Name='StartingGovernorTitles'),
+    (SELECT CASE WHEN Value = CAST(Value AS INTEGER) THEN CAST(Value AS INTEGER) END FROM MNS_Settings WHERE Name='VolcanoStartBiasTier'),
+    (SELECT CASE WHEN Value = CAST(Value AS INTEGER) THEN CAST(Value AS INTEGER) END FROM MNS_Settings WHERE Name='FloodplainStartBiasTier')
 );
 -- Player-level reward, attached exactly once to this leader. Delta is the native
 -- argument. Do not attach this to every city or to global GameModifiers.

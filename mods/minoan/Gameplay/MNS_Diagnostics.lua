@@ -21,7 +21,8 @@ function MNS_Diagnose(playerID)
     print('[MNS CHECK] pending invocation='..tostring(Game:GetProperty('MNS_PendingInvocation')~=nil))
     for _,city in p:GetCities():Members() do
         local g=W.governor(city)
-        print('[MNS CHECK] city='..city:GetID()..' governor='..tostring(g)..' establishedMarker='..tostring(city:GetProperty('MNS_GovernorEstablished'))..' protected='..tostring(W.protected(city)))
+        local marker = city:GetProperty('MNS_GovernorEstablished')
+        print('[MNS CHECK] city='..city:GetID()..' governor='..tostring(g)..' establishedMarker='..tostring(marker)..' protected='..tostring(W.protected(city)))
     end
     print('[MNS CHECK] governor transition strength='..tostring(W.setting('MinoanGovernorTransitionStrength','missing')))
     local s=p:GetProperty('MNS_Knowledge') or {}

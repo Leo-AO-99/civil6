@@ -67,7 +67,11 @@ local function city(owner)
  function c:GetPopulation()return self.pop end;function c:ChangePopulation(v)self.pop=self.pop+v end
  function c:GetYield()return self.faith end;function c:GetName()return 'Mock City'end
  function c:GetDistricts()
-  local ds=collection({[0]=self.district});function ds:GetDistrict(i)return self.items[i]end;return ds
+  local ds=collection({[0]=self.district})
+  function ds:GetDistrict(i)return self.items[i]end
+  function ds:GetDistrictLocation(i)if self.items[i]then return c:GetX(),c:GetY() end end
+  function ds:GetDistrictAtLocation(x,y)if x==c:GetX() and y==c:GetY()then return c.district end end
+  return ds
  end
  function c:GetBuildings()
   local b=self.buildings;function b:HasBuilding()return self.present end
@@ -109,8 +113,9 @@ for id=0,1 do
   F.unitSerial=(F.unitSerial or 0)+1
   local u=properties({id=F.unitSerial,owner=p.id,kind=kind,x=x,y=y,moves=2})
   function u:GetID()return self.id end;function u:GetOwner()return self.owner end
-  function u:GetType()return self.kind end;function u:GetX()return self.x end;function u:GetY()return self.y end
-  function u:GetMovesRemaining()return self.moves end;function u:SetName(n)self.name=n end
+  function u:GetType()return self.kind end;function u:GetTypeHash()return self.kind end
+  function u:GetX()return self.x end;function u:GetY()return self.y end
+  function u:GetMovesRemaining()return self.moves end
   self.items[u.id]=u;return u
  end
  function p.units:Destroy(u)self.items[u.id]=nil end
@@ -138,6 +143,10 @@ Units={GetUnitsInPlot=function(plot)
  local out={};for _,p in pairs(Players)do for _,u in p:GetUnits():Members()do if u.x==plot.index then out[#out+1]=u end end end;return out
 end}
 UnitManager={ChangeMovesRemaining=function(u,n)u.moves=u.moves+n end}
+function UnitManager.InitUnit(owner,kind,x,y)
+ return Players[owner]:GetUnits():Create(GameInfo.Units[kind].Index,x,y)
+end
+function UnitManager.Kill(unit)Players[unit:GetOwner()]:GetUnits():Destroy(unit)end
 ImprovementBuilder={SetImprovementType=function(plot,t,owner)plot.improvement=t end,
  SetImprovementPillaged=function(plot,v)plot.pillaged=v end}
 GameClimate={GetSeverityForLastSeaLevelEvent=function()return F.climateSeverity or 0 end,GetOneOffPlotsByID=function(id)return F.footprint or {1,2}end}

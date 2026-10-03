@@ -4,11 +4,22 @@ include('MNS_World')
 include('MNS_Protection')
 local C, W, P = MNS_Core, MNS_World, MNS_Protection
 local flushing = {}
+local unavailableResearch = {}
 local STATE = 'MNS_Knowledge'
 local function log(text) print('[MNS] ' .. tostring(text)) end
+local function disasterAudit(playerID, kind, detail)
+    local player = Players[playerID]
+    if not player then return end
+    local audit = player:GetProperty('MNS_DisasterAudit') or {}
+    audit[kind] = (audit[kind] or 0) + 1
+    audit.lastTurn, audit.lastKind, audit.lastDetail = Game.GetCurrentGameTurn(), kind, detail
+    player:SetProperty('MNS_DisasterAudit', audit)
+    print(string.format('[MNS DISASTER] turn=%d player=%d %s #%d %s',
+        audit.lastTurn, playerID, kind, audit[kind], detail or ''))
+end
 local function status(id,text)
     local p=Players[id]
-    if p then p:SetProperty('MNS_Status',text) end
+    if p and p:GetProperty('MNS_Status')~=text then p:SetProperty('MNS_Status',text) end
     if W.n('LogLevel',1)>0 then log('P'..tostring(id)..': '..text) end
 end
 local function state(p)
@@ -50,7 +61,12 @@ local function flushKind(player,kind)
     if bank<=0 then return end
     local o,currentName,costName,progressName,changeName=researchAdapter(player,kind)
     if not o[currentName] or not o[progressName] or not o[changeName] then
-        status(player:GetID(),kind..'读取/写入API不可用，奖励仍保存在知识储备中。')
+        -- A property write here can schedule another research/UI update forever.
+        local key=player:GetID()..':'..kind
+        if not unavailableResearch[key] then
+            unavailableResearch[key]=true
+            log(key..'进度API不可用，奖励保留在储备；本次加载仅提示一次。')
+        end
         return
     end
     local item=o[currentName](o)
@@ -101,8 +117,12 @@ local function consumeInvocation(pending)
             unit:SetProperty('MNS_Charges',math.max(0,charges-1))
             unit:SetProperty('MNS_LastCast',Game.GetCurrentGameTurn())
             UnitManager.ChangeMovesRemaining(unit,-unit:GetMovesRemaining())
-            if charges<=1 then player:GetUnits():Destroy(unit) end
+            if charges<=1 then unit:SetProperty('MNS_Retire',true) end
         end
+    end
+    if not pending.unitID then
+        disasterAudit(pending.playerID, 'confirmed', string.format('event=%s requested=(%d,%d)',
+            tostring(pending.eventType), pending.x, pending.y))
     end
     Game:SetProperty('MNS_PendingInvocation',nil)
     status(pending.playerID,'灾害已确认触发。'..(pending.offensive and '彗星不产生科文返还。' or '已按受影响城市结算。'))
@@ -112,12 +132,17 @@ local function onOccurred(eventType,severity,x,y,mitigation,id)
     if not def then return end
     local key=eventKey(eventType,x,y,id)
     local pending=Game:GetProperty('MNS_PendingInvocation')
-    local matches=pending and pending.eventType==eventType and pending.x==x and pending.y==y
+    local affectedPlots=W.affected(def,x,y,id)
+    local matches=W.invocationMatches(pending,eventType,x,y,affectedPlots)
+    if pending then
+        log(string.format('EVENT event=%s at=(%s,%s) requested=%s at=(%s,%s) footprintMatch=%s',
+            tostring(eventType),tostring(x),tostring(y),tostring(pending.eventType),
+            tostring(pending.x),tostring(pending.y),tostring(matches)))
+    end
     local snapshots=Game:GetProperty('MNS_DisasterSnapshots') or {}
     local before=snapshots[key] or (matches and pending.snapshots) or {}
     if W.isNatural(def) then
         -- This deliberately does not revive units, protect against comets or roll back terrain fertility.
-        local affectedPlots=W.affected(def,x,y,id)
         P.restore(before,affectedPlots)
         local oldFaith={}
         for _,s in ipairs(before) do oldFaith[s.owner..':'..s.id]=s.faith end
@@ -168,13 +193,29 @@ local function invoke(playerID,plot,def,unit)
     local params={EventType=def.Index,Location=plot:GetIndex(),NamedRiver=-1,NamedVolcano=-1}
     if W.eventFamily(def)=='flood' then
         params.NamedRiver=RiverManager.GetRiverForFloodplain(plot:GetX(),plot:GetY())
+        if not params.NamedRiver or params.NamedRiver<0 then
+            return false,'目标已没有合法河流，未触发、未扣次数。'
+        end
+    elseif W.eventFamily(def)=='volcano' then
+        local volcano=W.volcanoType(plot)
+        if volcano==nil or volcano<0 then
+            return false,'无法定位这座火山的原生编号，未触发、未扣次数；不会改在随机火山喷发。'
+        end
+        params.NamedVolcano=volcano
     end
+    log(string.format('INVOKE event=%s target=(%d,%d) river=%d volcano=%d',
+        def.RandomEventType,plot:GetX(),plot:GetY(),params.NamedRiver,params.NamedVolcano))
     -- Location is always explicit. No random fallback elsewhere in the world.
+    if not unit then
+        disasterAudit(playerID,'attempted', string.format('event=%s target=(%d,%d) plot=%d river=%d',
+            def.RandomEventType,plot:GetX(),plot:GetY(),plot:GetIndex(),params.NamedRiver))
+    end
     Game:SetProperty('MNS_PendingInvocation',pending)
     local ok,err=pcall(GameRandomEvents.ApplyEvent,params)
     if not ok then
         -- Keep the lock: a thrown native call may have partially applied. Never cast a second event automatically.
         status(playerID,'灾害调用报错，已锁定重试避免重复事件：'..tostring(err))
+        if not unit then disasterAudit(playerID,'failed',tostring(err)) end
         return false,'灾害调用失败；请保留日志并重载施法前存档。'
     end
     if Game:GetProperty('MNS_PendingInvocation') then
@@ -197,7 +238,7 @@ local function buy(playerID,cityID,role)
     -- Avoid creating into an occupied civilian/religious slot.
     local occupied=Units.GetUnitsInPlot(Map.GetPlot(city:GetX(),city:GetY()))
     for _,u in ipairs(occupied or {}) do
-        local d=GameInfo.Units[u:GetType()]
+        local d=GameInfo.Units[u:GetTypeHash()]
         if d and (d.Combat or 0)==0 and (d.RangedCombat or 0)==0 then
             return false,'请先移走城市中心的平民/宗教单位。'
         end
@@ -205,47 +246,99 @@ local function buy(playerID,cityID,role)
     local spec=W.roleSpec(role)
     local def=GameInfo.Units[spec.base]
     if not def then return false,'基础单位数据未加载。' end
-    local unit=p:GetUnits():Create(def.Index,city:GetX(),city:GetY())
+    local unit=UnitManager.InitUnit(playerID,spec.base,city:GetX(),city:GetY())
     if not unit then return false,'单位创建失败，没有扣费。' end
     local initialized,initError=pcall(function()
         unit:SetProperty('MNS_Role',role)
         unit:SetProperty('MNS_Charges',spec.charges)
-        unit:SetName(role=='Oracle' and '神谕祭司' or '末日先知')
+        -- Gameplay has no Unit:SetName on this build. The custom UI labels the role.
         UnitManager.ChangeMovesRemaining(unit,spec.moves-unit:GetMovesRemaining())
     end)
     if not initialized then
-        p:GetUnits():Destroy(unit)
+        UnitManager.Kill(unit)
         log('购买初始化失败，撤销新单位：'..tostring(initError))
         return false,'祭司初始化失败，没有扣费。'
     end
     religion:ChangeFaithBalance(-cost)
     p:SetProperty('MNS_Bought_'..role,(p:GetProperty('MNS_Bought_'..role) or 0)+1)
-    return true,'祭司已购买；选中它，再使用米诺斯面板。'
+    return true,'祭司已购买；选中它，点击单位操作区的祭司按钮施法。'
 end
-local function cast(playerID,unitID,plotID)
+local function cast(playerID,unitID,plotID,eventType)
     local p=Players[playerID]
     local unit=p and p:GetUnits():FindID(unitID)
     local plot=Map.GetPlotByIndex(plotID)
     local ok,err=W.validateCast(playerID,unit,plot)
     if not ok then return false,err end
+    if p:GetProperty('MNS_ScheduledCast') or Game:GetProperty('MNS_PendingInvocation') then
+        return false,'已有预约或灾害正在处理，请完成后再预约。'
+    end
     local choices=W.options(plot,W.unitRole(unit)=='Prophet')
-    local def=choices[Game.GetRandNum(#choices,'MNS cast event')+1]
-    return invoke(playerID,plot,def,unit)
+    local def
+    for _,choice in ipairs(choices) do
+        if choice.RandomEventType==eventType or (eventType==nil and #choices==1) then def=choice;break end
+    end
+    if not def or (W.unitRole(unit)~='Prophet' and not W.fertileFamily(def)) then
+        return false,'请选择该地块当前合法的灾害。'
+    end
+    p:SetProperty('MNS_ScheduledCast',{unitID=unitID,plotID=plotID,eventType=def.RandomEventType,
+        role=W.unitRole(unit),dueTurn=Game.GetCurrentGameTurn()+1})
+    UnitManager.ChangeMovesRemaining(unit,-unit:GetMovesRemaining())
+    return true,'已预约下一回合在所选地块触发所选灾害；本回合移动力已用尽，成功确认后扣次数。'
+end
+local function runScheduled(playerID,now)
+    local p=Players[playerID]
+    local job=p:GetProperty('MNS_ScheduledCast')
+    if not job or now<job.dueTurn then return false end
+    -- Remove before any native callback: loading or re-entry must not cast twice.
+    p:SetProperty('MNS_ScheduledCast',nil)
+    local unit=p:GetUnits():FindID(job.unitID)
+    local plot=Map.GetPlotByIndex(job.plotID)
+    local ok,reason=W.validateCast(playerID,unit,plot)
+    local def
+    if ok and W.unitRole(unit)==job.role then
+        for _,choice in ipairs(W.options(plot,job.role=='Prophet')) do
+            if choice.RandomEventType==job.eventType then def=choice;break end
+        end
+    end
+    if not def then
+        status(playerID,'预约取消，未扣次数：'..(reason or '目标条件或所选灾害已变化。'))
+        return true
+    end
+    log('SCHEDULED turn='..now..' event='..job.eventType..' plot='..job.plotID)
+    local applied,message=invoke(playerID,plot,def,unit)
+    if not applied then status(playerID,message) end
+    return true
 end
 local function request(playerID,args)
     -- UI sends identifiers only; faith, charges, unlocks, war, visibility and distance are re-read here.
     if type(args)~='table' or not W.minoan(playerID) then return end
-    if GameConfiguration.IsAnyMultiplayer() or GameConfiguration.IsHotseat() then
+    -- These UI helpers can be absent in the gameplay Lua context.
+    if (GameConfiguration.IsAnyMultiplayer and GameConfiguration.IsAnyMultiplayer())
+        or (GameConfiguration.IsHotseat and GameConfiguration.IsHotseat()) then
         status(playerID,'本开发版暂不支持联机/热座，未执行操作。'); return
     end
     local ok,message
-    if args.Action=='Buy' then ok,message=buy(playerID,tonumber(args.CityID),args.Role)
+    if args.Action=='Retire' then
+        local id=tonumber(args.UnitID)
+        local unit=id and Players[playerID]:GetUnits():FindID(id)
+        local role=W.unitRole(unit)
+        if unit and unit:GetOwner()==playerID and (role=='Oracle' or role=='Prophet')
+            and unit:GetProperty('MNS_Retire') and (unit:GetProperty('MNS_Charges') or 0)<=0 then
+            UnitManager.Kill(unit)
+        end
+        return
+    elseif args.Action=='Buy' then ok,message=buy(playerID,tonumber(args.CityID),args.Role)
     elseif args.Action=='Cast' then
         local uid,pid=tonumber(args.UnitID),tonumber(args.PlotID)
         if not uid or not pid or pid<0 or pid>=Map.GetPlotCount() then return end
-        ok,message=cast(playerID,uid,pid)
+        if args.EventType~=nil and type(args.EventType)~='string' then return end
+        ok,message=cast(playerID,uid,pid,args.EventType)
     else return end
-    if message then status(playerID,(ok and '' or '未执行：')..message) end
+    if message then
+        local text=(ok and '' or '未执行：')..message
+        status(playerID,text)
+        if args.Action=='Buy' then Players[playerID]:SetProperty('MNS_PurchaseStatus',text) end
+    end
 end
 local function turn(playerID)
     if not W.minoan(playerID) then return end
@@ -257,11 +350,26 @@ local function turn(playerID)
     -- Restore configured movement budget only for our scripted unit variants.
     for _,u in p:GetUnits():Members() do
         local role=W.unitRole(u)
-        if role=='Oracle' or role=='Prophet' then
+        if (role=='Oracle' or role=='Prophet') and not u:GetProperty('MNS_Retire') then
             UnitManager.ChangeMovesRemaining(u,W.roleSpec(role).moves-u:GetMovesRemaining())
         end
     end
-    if not W.enabled('AutoDisastersEnabled') or Game:GetProperty('MNS_PendingInvocation') then return end
+    local pending=Game:GetProperty('MNS_PendingInvocation')
+    if pending and now > pending.turn then
+        -- Missing target confirmation must not permanently block future casts.
+        -- Do not spend a charge or replay the old request; auto keeps its schedule.
+        if pending.unitID then
+            status(pending.playerID,'上次预约未在目标处得到确认，已解除等待，未扣次数；请重新选择目标。')
+        else
+            disasterAudit(pending.playerID,'unconfirmed',string.format('submittedTurn=%d event=%s target=(%d,%d)',
+                pending.turn,tostring(pending.eventType),pending.x,pending.y))
+        end
+        Game:SetProperty('MNS_PendingInvocation',nil)
+        pending=nil
+    end
+    if pending then return end
+    if runScheduled(playerID,now) then return end
+    if not W.enabled('AutoDisastersEnabled') then return end
     local nextTurn=p:GetProperty('MNS_NextDisasterTurn') or W.n('AutoFirstTurn',8,0)
     if now<nextTurn then return end
     local lo=math.floor(W.n('AutoMinTurns',2,1))
@@ -285,15 +393,21 @@ local function turn(playerID)
         candidates=others
         for _,entry in ipairs(preferred) do candidates[#candidates+1]=entry end
     end
-    if #candidates==0 then status(playerID,'本次没有合法肥地灾害起点，跳过；不退回龙卷风、陨石或其他毁地事件。'); return end
+    if #candidates==0 then
+        disasterAudit(playerID,'skipped','no eligible owned tile')
+        status(playerID,'本次没有合法肥地灾害起点，跳过；不退回龙卷风、陨石或其他毁地事件。'); return
+    end
     local entry=candidates[Game.GetRandNum(#candidates,'MNS owned plot')+1]
     local def=entry.opts[Game.GetRandNum(#entry.opts,'MNS automatic event')+1]
-    invoke(playerID,entry.plot,def,nil)
+    local ok, message=invoke(playerID,entry.plot,def,nil)
+    if not ok then disasterAudit(playerID,'rejected',message); status(playerID,message) end
 end
 
 -- Explicit diagnostics; registration alone does not prove the game's callback timing.
 local function initialize()
-    if GameConfiguration.IsAnyMultiplayer() or GameConfiguration.IsHotseat() then
+    -- Gameplay may not expose the multiplayer helpers available to UI scripts.
+    if (GameConfiguration.IsAnyMultiplayer and GameConfiguration.IsAnyMultiplayer())
+        or (GameConfiguration.IsHotseat and GameConfiguration.IsHotseat()) then
         log('此版本仅支持单人；Gameplay脚本未启用。'); return
     end
     if not GameInfo.MNS_Settings then log('ERROR: MNS_Settings 不存在；检查 Database.log。'); return end

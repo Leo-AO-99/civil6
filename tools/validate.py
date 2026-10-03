@@ -16,11 +16,16 @@ ROOT = Path(__file__).resolve().parents[1]
 MOD = ROOT / 'mods/minoan'
 
 def static_checks() -> None:
-    for p in list(MOD.rglob('*.xml')) + list(MOD.glob('*.modinfo')):
+    for p in list(MOD.rglob('*.xml')) + list(MOD.glob('*.modinfo')) + list(MOD.rglob('*.artdef')) + list(MOD.glob('*.dep')):
         ET.parse(p)
+    ui = ET.parse(MOD / 'UI/MNS_Panel.xml').getroot()
+    controls = {node.get('ID') for node in ui.iter() if node.get('ID')}
+    references = set(re.findall(r'Controls\.([A-Za-z0-9_]+)', (MOD / 'UI/MNS_Panel.lua').read_text(encoding='utf-8')))
+    assert not references - controls, f'UI controls missing from XML: {references - controls}'
+    assert all(node.get('Hidden') == '1' for node in ui), 'UI roots must remain hidden until attached to native panels'
     manifest = ET.parse(MOD / 'MinoanDisasters.modinfo').getroot()
     declared = {f.text for f in manifest.find('Files')}
-    actual = {p.relative_to(MOD).as_posix() for p in MOD.rglob('*') if p.suffix in ('.lua','.sql','.xml')}
+    actual = {p.relative_to(MOD).as_posix() for p in MOD.rglob('*') if p.suffix in ('.lua','.sql','.xml','.artdef','.dep')}
     assert declared == actual, f'manifest difference: {declared ^ actual}'
     for action in ('InGameActions','FrontEndActions'):
         for f in manifest.find(action).iter('File'):
@@ -33,8 +38,8 @@ def static_checks() -> None:
                 assert (lang,tag) in tags, f'{p}: missing {lang} {tag}'
     scripts = {p.stem for p in MOD.rglob('*.lua')}
     for p in MOD.rglob('*.lua'):
-        for name in re.findall(r"include\(['\"]([^'\"]+)",p.read_text()):
-            assert name in scripts, f'{p}: missing include {name}'
+        for name in re.findall(r"include\(['\"]([^'\"]+)",p.read_text(encoding='utf-8')):
+            assert name in scripts or name in ('GovernorPanel', 'NaturalDisasterPopup'), f'{p}: missing include {name}'
     print('PASS XML, mod manifest, include paths, localization references')
 
 def db_checks() -> None:
@@ -90,10 +95,10 @@ CREATE TABLE Adjacency_YieldChanges(ID TEXT PRIMARY KEY,Description TEXT,YieldTy
     config=sqlite3.connect(':memory:')
     config.executescript('''CREATE TABLE Players(Domain TEXT, CivilizationType TEXT, LeaderType TEXT,
 CivilizationName TEXT, LeaderName TEXT, CivilizationAbilityName TEXT,CivilizationAbilityDescription TEXT,
-LeaderAbilityName TEXT,LeaderAbilityDescription TEXT,Portrait TEXT,
+LeaderAbilityName TEXT,LeaderAbilityDescription TEXT,Portrait TEXT,SortIndex INTEGER,
 PRIMARY KEY(Domain,CivilizationType,LeaderType));
-INSERT INTO Players VALUES('Players:Expansion2_Players','CIVILIZATION_GREECE','LEADER_PERICLES','Greece','Pericles','a','b','c','d','Pericles');
-INSERT INTO Players VALUES('Players:StandardPlayers','CIVILIZATION_GREECE','LEADER_PERICLES','Greece','Pericles','a','b','c','d','Pericles');''')
+INSERT INTO Players VALUES('Players:Expansion2_Players','CIVILIZATION_GREECE','LEADER_PERICLES','Greece','Pericles','a','b','c','d','Pericles',NULL);
+INSERT INTO Players VALUES('Players:StandardPlayers','CIVILIZATION_GREECE','LEADER_PERICLES','Greece','Pericles','a','b','c','d','Pericles',NULL);''')
     config.executescript((MOD/'Data/Configuration.sql').read_text())
     rows=config.execute("SELECT Domain,Portrait FROM Players WHERE LeaderType='LEADER_MNS_MINOS'").fetchall()
     assert rows==[('Players:Expansion2_Players','Pericles')]
@@ -118,7 +123,7 @@ def lua_checks(required: bool) -> None:
     if not lua:
         if required: raise RuntimeError('Lua is required; install Lua 5.3/5.4 or TeX Lua.')
         print('SKIP Lua tests: interpreter unavailable'); return
-    for script in ('test_core.lua','test_gameplay.lua','test_governor_state.lua','test_disasters.lua'):
+    for script in ('test_core.lua','test_gameplay.lua','test_governor_state.lua','test_disasters.lua','test_scheduled_cast.lua','test_target_highlight.lua'):
         subprocess.run([lua,str(ROOT/'tests'/script),str(ROOT)],check=True,cwd=ROOT)
 
 def main() -> None:
