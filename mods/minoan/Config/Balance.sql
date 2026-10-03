@@ -39,6 +39,8 @@ INSERT OR REPLACE INTO MNS_Settings (Name, Value) VALUES
 -- 一次性奖励：本城当时每回合信仰 × 百分比；不会扣信仰。
 ('ScienceRewardPercent', '50'),
 ('CultureRewardPercent', '50'),
+-- Global native tile fertility for the 12 cultivation events; all civilizations benefit.
+('DisasterTileCultureChance', '5'),    -- percent; 1 = 1%, 0 disables new culture rows
 ('RewardCityTurnCap', '1'),
 ('RewardRequiresSanctuary', '0'),
 -- 同一原生灾害ID每城只结算一次；森火另设保守冷却，防跨ID蔓延刷奖。
