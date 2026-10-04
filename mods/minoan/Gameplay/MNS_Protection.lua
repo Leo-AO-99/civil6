@@ -16,6 +16,10 @@ function P.capture()
             end
         end
     end
+    table.sort(all,function(a,b)
+        if a.owner~=b.owner then return a.owner<b.owner end
+        return a.id<b.id
+    end)
     return all
 end
 function P.restoreOne(s)

@@ -123,7 +123,7 @@ def lua_checks(required: bool) -> None:
     if not lua:
         if required: raise RuntimeError('Lua is required; install Lua 5.3/5.4 or TeX Lua.')
         print('SKIP Lua tests: interpreter unavailable'); return
-    for script in ('test_core.lua','test_gameplay.lua','test_governor_state.lua','test_disasters.lua','test_scheduled_cast.lua','test_target_highlight.lua'):
+    for script in ('test_core.lua','test_gameplay.lua','test_governor_state.lua','test_disasters.lua','test_scheduled_cast.lua','test_target_highlight.lua','test_fractional_rewards.lua','test_culture_bridge.lua','test_multiplayer.lua'):
         subprocess.run([lua,str(ROOT/'tests'/script),str(ROOT)],check=True,cwd=ROOT)
 
 def main() -> None:

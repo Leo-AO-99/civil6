@@ -1,13 +1,6 @@
 -- Extend native city/selected-unit controls; Gameplay validates every request.
 include('MNS_World')
 local W = MNS_World
--- UI owns the read-only cultural-progress API; all mutations remain in Gameplay.
-ExposedMembers.MNS_ReadCulture=function(playerID,item)
-    local player=Players[playerID]
-    if not player or not item or item<0 then return nil end
-    local culture=player:GetCulture()
-    return {current=culture:GetProgressingCivic(),progress=culture:GetCulturalProgress(item)}
-end
 local faithList, faithScroll, noFaithContent, actionStack, actionsParent
 local targets, selected, selectedUnit = {}, 1, nil
 local confirmPlot, pickerOpen, lastError = nil, false, nil
@@ -78,6 +71,7 @@ end
 local lastKnowledgeRequest
 local function flushKnowledge(player)
     if not player or not W.minoan(player:GetID()) or UI.IsGameCoreBusy() then return end
+    if not player:IsTurnActive() then return end
     local s=player:GetProperty('MNS_Knowledge') or {}
     local culture=player:GetCulture()
     local pending=s.pending
@@ -88,20 +82,25 @@ local function flushKnowledge(player)
         if pending.kind~='culture' or not pending.uiReadback then return end
         if not culture:HasCivic(item) and progress<pending.before+pending.amount then return end
     elseif (s.culture or 0)<1 or culture:GetCultureCost(item)-progress<1 then return end
-    local key=table.concat({item,progress,s.culture or 0,pending and pending.amount or 0,
-        pending and pending.before or -1},':')
+    local turn=Game.GetCurrentGameTurn()
+    local revision=player:GetProperty('MNS_CultureRevision') or 0
+    local serial=pending and (pending.serial or 0) or (s.cultureSerial or 0)
+    local key=table.concat({player:GetID(),turn,revision,serial,item,progress,s.culture or 0,
+        pending and pending.amount or 0},':')
     if key==lastKnowledgeRequest then return end
     lastKnowledgeRequest=key
-    request{Action='FlushKnowledge'}
+    request{Action='CultureSnapshot',CivicID=item,Progress=progress,Turn=turn,
+        Revision=revision,Serial=serial}
 end
 local retiring={}
 local function retireSpentUnits(player)
     if not player or not W.minoan(player:GetID()) or UI.IsGameCoreBusy() then return end
     for _,unit in player:GetUnits():Members() do
         local id=unit:GetID()
-        if unit:GetProperty('MNS_Retire') and not retiring[id] then
+        local key=player:GetID()..':'..id
+        if unit:GetProperty('MNS_Retire') and not retiring[key] then
             -- Selection must be cleared before gameplay deletes the object.
-            retiring[id]=true
+            retiring[key]=true
             local selected=UI.GetHeadSelectedUnit()
             if selected and selected:GetOwner()==player:GetID() and selected:GetID()==id then
                 closePreview()

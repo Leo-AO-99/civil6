@@ -139,20 +139,20 @@ test('automatic scheduler skips barren land instead of using tornado or comet',f
     ground(F,'NONE','TERRAIN_GRASS')
     dofile(root..'/mods/minoan/Gameplay/MNS_Gameplay.lua')
     F.settings.AutoDisastersEnabled='1';F.turn=8
-    Events.PlayerTurnActivated.fire(0)
+    GameEvents.PlayerTurnStartComplete.fire(0)
     eq(F.applyCount,0);assert(Players[0]:GetProperty('MNS_Status'):find('没有合法肥地'))
 end)
 test('automatic scheduler still invokes a fertile forest event',function(F)
     dofile(root..'/mods/minoan/Gameplay/MNS_Gameplay.lua')
     F.settings.AutoDisastersEnabled='1';F.turn=8
-    Events.PlayerTurnActivated.fire(0)
+    GameEvents.PlayerTurnStartComplete.fire(0)
     eq(F.applyCount,1);eq(F.lastApplied.EventType,0)
 end)
 test('final invoke gate rejects an injected comet from automatic candidates',function(F)
     dofile(root..'/mods/minoan/Gameplay/MNS_Gameplay.lua')
     MNS_World.options=function()return {GameInfo.RandomEvents[1]} end
     F.settings.AutoDisastersEnabled='1';F.turn=8
-    Events.PlayerTurnActivated.fire(0)
+    GameEvents.PlayerTurnStartComplete.fire(0)
     eq(F.applyCount,0);eq(Game:GetProperty('MNS_PendingInvocation'),nil)
 end)
 test('final invoke gate rejects injected comet for Oracle without charging',function(F)
@@ -204,16 +204,16 @@ test('unconfirmed automatic and manual waits expire without same-turn retry',fun
  dofile(root..'/mods/minoan/Gameplay/MNS_Gameplay.lua')
  F.settings.AutoDisastersEnabled='1';F.turn=8
  GameRandomEvents.ApplyEvent=function()F.applyCount=F.applyCount+1 end
- Events.PlayerTurnActivated.fire(0)
+ GameEvents.PlayerTurnStartComplete.fire(0)
  eq(F.applyCount,1);assert(Game:GetProperty('MNS_PendingInvocation'))
- Events.PlayerTurnActivated.fire(0);eq(F.applyCount,1)
- F.turn=9;Events.PlayerTurnActivated.fire(0)
+ GameEvents.PlayerTurnStartComplete.fire(0);eq(F.applyCount,1)
+ F.turn=9;GameEvents.PlayerTurnStartComplete.fire(0)
  eq(F.applyCount,1);eq(Game:GetProperty('MNS_PendingInvocation'),nil)
  eq(Players[0]:GetProperty('MNS_DisasterAudit').unconfirmed,1)
- F.turn=10;Events.PlayerTurnActivated.fire(0);eq(F.applyCount,2)
+ F.turn=10;GameEvents.PlayerTurnStartComplete.fire(0);eq(F.applyCount,2)
  local pending=Game:GetProperty('MNS_PendingInvocation');pending.unitID=99
  Game:SetProperty('MNS_PendingInvocation',pending)
- F.turn=20;Events.PlayerTurnActivated.fire(0)
+ F.turn=20;GameEvents.PlayerTurnStartComplete.fire(0)
  eq(F.applyCount,3);eq(Game:GetProperty('MNS_PendingInvocation').unitID,nil)
 end)
 test('volcano and comet require the requested origin, not adjacent footprint',function(F,W)

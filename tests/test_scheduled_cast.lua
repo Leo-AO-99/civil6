@@ -27,18 +27,18 @@ assert(F.applyCount==0 and u:GetProperty('MNS_Charges')==2 and u.moves==0)
 request(u,'RANDOM_EVENT_FLOOD_MODERATE')
 assert(p:GetProperty('MNS_ScheduledCast').eventType=='RANDOM_EVENT_FLOOD_MAJOR')
 -- The persistent property survives a same-turn activation without execution.
-Events.PlayerTurnActivated.fire(0);assert(F.applyCount==0)
-F.turn=1;Events.PlayerTurnActivated.fire(0)
+GameEvents.PlayerTurnStartComplete.fire(0);assert(F.applyCount==0)
+F.turn=1;GameEvents.PlayerTurnStartComplete.fire(0)
 assert(F.applyCount==1 and F.lastApplied.EventType==1 and u:GetProperty('MNS_Charges')==1)
-Events.PlayerTurnActivated.fire(0);assert(F.applyCount==1)
+GameEvents.PlayerTurnStartComplete.fire(0);assert(F.applyCount==1)
 assert(p:GetProperty('MNS_ScheduledCast')==nil)
 F,p,u=setup();request(u,'RANDOM_EVENT_FLOOD_MAJOR')
-F.plots[1].owner=1;F.turn=1;Events.PlayerTurnActivated.fire(0)
+F.plots[1].owner=1;F.turn=1;GameEvents.PlayerTurnStartComplete.fire(0)
 assert(F.applyCount==0 and u:GetProperty('MNS_Charges')==2 and p:GetProperty('MNS_ScheduledCast')==nil)
--- Missing culture getter must never write player properties and feed update events.
+-- Without an owner snapshot, civic notifications must not mutate the reward bank.
 p.culture.GetCulturalProgress=nil;p:SetProperty('MNS_Knowledge',{culture=5,science=0})
 local writes=0;local set=p.SetProperty
-p.SetProperty=function(self,...)writes=writes+1;return set(self,...)end
+p.SetProperty=function(self,key,...)if key=='MNS_Knowledge' then writes=writes+1 end;return set(self,key,...)end
 for i=1,4 do Events.CivicChanged.fire(0,0)end
 assert(writes==0 and p:GetProperty('MNS_Knowledge').culture==5)
 print('PASS selected event, delayed single execution, duplicate rejection, changed target cancellation, culture no-write loop')
@@ -49,14 +49,14 @@ GameInfo.RandomEvents=F.info({{RandomEventType='RANDOM_EVENT_VOLCANO_MEGACOLOSSA
 GameInfo.RandomEvent_Yields=F.info({{RandomEventType='RANDOM_EVENT_VOLCANO_MEGACOLOSSAL',YieldType='YIELD_FOOD',Amount=1,Percentage=100}},'RandomEventType')
 GameInfo.NamedVolcanoes=F.info({{NamedVolcanoType='NAMED_VOLCANO_TEST',Name='LOC_TEST',Index=73}},'NamedVolcanoType')
 MapFeatureManager={GetNamedVolcanoes=function()return {{PlotX=1,PlotY=0,Name='LOC_TEST'}}end}
-request(u,'RANDOM_EVENT_VOLCANO_MEGACOLOSSAL');F.turn=1;Events.PlayerTurnActivated.fire(0)
+request(u,'RANDOM_EVENT_VOLCANO_MEGACOLOSSAL');F.turn=1;GameEvents.PlayerTurnStartComplete.fire(0)
 assert(F.applyCount==1 and F.lastApplied.NamedVolcano==73 and F.lastApplied.Location==1)
 assert(u:GetProperty('MNS_Charges')==1)
-F.turn=2;Events.PlayerTurnActivated.fire(0)
+F.turn=2;GameEvents.PlayerTurnStartComplete.fire(0)
 MapFeatureManager.GetNamedVolcanoes=function()return {}end
-request(u,'RANDOM_EVENT_VOLCANO_MEGACOLOSSAL');F.turn=3;Events.PlayerTurnActivated.fire(0)
+request(u,'RANDOM_EVENT_VOLCANO_MEGACOLOSSAL');F.turn=3;GameEvents.PlayerTurnStartComplete.fire(0)
 assert(F.applyCount==1 and u:GetProperty('MNS_Charges')==1)
 Game:SetProperty('MNS_PendingInvocation',{unitID=u.id,playerID=0,turn=2,eventType=0,x=1,y=0})
-F.turn=4;Events.PlayerTurnActivated.fire(0)
+F.turn=4;GameEvents.PlayerTurnStartComplete.fire(0)
 assert(Game:GetProperty('MNS_PendingInvocation')==nil and u:GetProperty('MNS_Charges')==1)
 print('PASS exact named volcano, unavailable identifier refuses random eruption, stale manual wait releases without charging')

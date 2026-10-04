@@ -6,9 +6,7 @@ culture.current=0
 culture.progress[0]=5
 culture.GetCulturalProgress=nil -- Match the real Gameplay API limitation.
 local ui={current=0,progress={[0]=5,[1]=0}}
-ExposedMembers={MNS_ReadCulture=function(_,item)
-    return {current=ui.current,progress=ui.progress[item] or 0}
-end}
+ExposedMembers=setmetatable({},{__index=function() error('Gameplay must not read local UI') end})
 local writes=0
 local native=culture.ChangeCurrentCulturalProgress
 culture.ChangeCurrentCulturalProgress=function(self,amount)
@@ -16,13 +14,22 @@ culture.ChangeCurrentCulturalProgress=function(self,amount)
     native(self,amount)
 end
 local function load()
-    for _,event in ipairs({'PlayerTurnActivated','ResearchChanged','CivicChanged','RandomEventStarted','RandomEventOccurred'}) do
+    for _,event in ipairs({'ResearchChanged','CivicChanged','RandomEventStarted','RandomEventOccurred'}) do
         Events[event].handlers={}
     end
     GameEvents.MNS_Action.handlers={}
+    GameEvents.PlayerTurnStartComplete.handlers={}
     dofile(root..'/mods/minoan/Gameplay/MNS_Gameplay.lua')
 end
-local function flush() GameEvents.MNS_Action.fire(0,{Action='FlushKnowledge'}) end
+local function flush()
+    local s=p:GetProperty('MNS_Knowledge') or {}
+    local r=s.pending
+    local item=r and r.item or ui.current
+    GameEvents.MNS_Action.fire(0,{Action='CultureSnapshot',CivicID=item,
+        Progress=ui.progress[item] or 0,Turn=Game.GetCurrentGameTurn(),
+        Revision=p:GetProperty('MNS_CultureRevision') or 0,
+        Serial=r and (r.serial or 0) or (s.cultureSerial or 0)})
+end
 local function bank() return p:GetProperty('MNS_Knowledge') end
 load()
 p:SetProperty('MNS_Knowledge',{science=0,culture=59.5})
@@ -50,4 +57,4 @@ flush()
 assert(writes==3 and culture:HasCivic(1))
 flush()
 assert(bank().culture==0 and not bank().pending)
-print('PASS culture bridge: overflow, fractions, stale UI, reload and no duplicate payout')
+print('PASS synchronized culture snapshots: overflow, fractions, stale UI, reload and no duplicate payout')

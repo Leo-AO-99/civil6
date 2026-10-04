@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
-<Mod id="f4f56898-125b-43e1-953d-9d39c3c73e32" version="4">
+<Mod id="f4f56898-125b-43e1-953d-9d39c3c73e32" version="5">
   <Properties>
     <Name>Minoan Disasters — 米诺斯天灾文明 [Alpha]</Name>
-    <Description>单人开发测试版。半价圣地、天灾信仰科文、祈灾与彗星。请先阅读 README 的实现差异。</Description>
+    <Description>多人联机适配测试版，所有玩家须安装同版。半价圣地、天灾信仰科文、祈灾与彗星。请先阅读 README 的实现差异。</Description>
     <Authors>civil6</Authors>
     <Teaser>米诺斯天灾与祭司玩法</Teaser>
     <CompatibleVersions>2.0</CompatibleVersions>

@@ -1,4 +1,4 @@
--- Minoan Disasters, single-player development build. All gameplay writes live here.
+-- Minoan Disasters: synchronized gameplay events and player operations only.
 include('MNS_Core')
 include('MNS_World')
 include('MNS_Protection')
@@ -40,30 +40,16 @@ local function researchAdapter(player,kind)
         return o, 'GetResearchingTech','GetResearchCost','GetResearchProgress','ChangeCurrentResearchProgress','HasTech'
     end
     local o=player:GetCulture()
-    if not o.GetCulturalProgress and ExposedMembers and ExposedMembers.MNS_ReadCulture then
-        local native=o
-        local function read(item) return ExposedMembers.MNS_ReadCulture(player:GetID(),item) end
-        o={MNS_DeferredProgress=true,
-            GetProgressingCivic=function()
-                local item=native:GetProgressingCivic()
-                local view=read(item)
-                return view and view.current==item and item or -1
-            end,
-            GetCultureCost=function(_,item) return native:GetCultureCost(item) end,
-            GetCulturalProgress=function(_,item) local view=read(item);return view and view.progress end,
-            HasCivic=function(_,item) return native:HasCivic(item) end,
-            ChangeCurrentCulturalProgress=function(_,amount) native:ChangeCurrentCulturalProgress(amount) end}
-    end
     return o, 'GetProgressingCivic','GetCultureCost','GetCulturalProgress','ChangeCurrentCulturalProgress','HasCivic'
 end
 local function settlePending(player,s)
     local r=s.pending
     if not r then return true end
     local o,_,_,progressName,_,hasName=researchAdapter(player,r.kind)
-    if not o[progressName] then error('研究进度读取 API 不可用；保留待结算记录，不猜测余额。') end
     local accepted
     if o[hasName](o,r.item) then accepted=r.amount
     else
+        if not o[progressName] then return false end
         local progress=o[progressName](o,r.item)
         if progress==nil then return false end
         accepted=math.min(r.amount,math.max(0,progress-r.before))
@@ -82,6 +68,7 @@ local function flushKind(player,kind)
     local bank=s[kind] or 0
     if bank<=0 then return end
     local o,currentName,costName,progressName,changeName=researchAdapter(player,kind)
+    if kind=='culture' and not o[progressName] then return end -- Owner sends a synchronized snapshot.
     if not o[currentName] or not o[progressName] or not o[changeName] then
         -- A property write here can schedule another research/UI update forever.
         local key=player:GetID()..':'..kind
@@ -103,11 +90,11 @@ local function flushKind(player,kind)
     local left=bank-amount
     -- Reserve before mutating progress: completion callbacks can be re-entrant.
     s[kind]=left
-    s.pending={kind=kind,item=item,before=before,amount=amount,uiReadback=o.MNS_DeferredProgress or nil}
+    s.pending={kind=kind,item=item,before=before,amount=amount,uiReadback=nil}
     save(player,s)
     local ok,err=pcall(o[changeName],o,amount)
     -- Read back, not a blind refund on exceptions: an API may partially apply first.
-    if not o.MNS_DeferredProgress then settlePending(player,s) end
+    settlePending(player,s)
     if not ok then error(err) end
 end
 local function flush(playerID)
@@ -119,6 +106,43 @@ local function flush(playerID)
     end)
     flushing[playerID]=nil
     if not ok then status(playerID,'知识储备结算失败，记录保留：'..tostring(err)) end
+end
+
+
+-- Only primitive values received through EXECUTE_SCRIPT enter this path. Never
+-- read ExposedMembers/UI here: different clients can display different frames.
+local function cultureSnapshot(playerID,args)
+    local p=Players[playerID]
+    local o=p:GetCulture()
+    local s=state(p)
+    local item,progress=tonumber(args.CivicID),tonumber(args.Progress)
+    if not item or item<0 or item==math.huge or item~=math.floor(item) or not progress or progress~=progress
+        or progress<0 or progress==math.huge then return end
+    local r=s.pending
+    if r then
+        if r.kind~='culture' or not r.uiReadback or r.item~=item
+            or args.Serial~=(r.serial or 0) then return end
+        if not o:HasCivic(item) and progress<r.before+r.amount then return end
+        s.pending=nil
+        save(p,s)
+        log(string.format('KNOWLEDGE culture accepted=%.2f bank=%.2f serial=%s',
+            r.amount,s.culture or 0,tostring(r.serial or 0)))
+        return -- A separate fresh snapshot must authorize the next civic.
+    end
+    if not p:IsTurnActive() or args.Turn~=Game.GetCurrentGameTurn()
+        or args.Revision~=(p:GetProperty('MNS_CultureRevision') or 0)
+        or args.Serial~=(s.cultureSerial or 0) or item~=o:GetProgressingCivic()
+        or o:HasCivic(item) then return end
+    local cost=o:GetCultureCost(item)
+    if progress>cost then return end
+    local amount=math.floor(math.min(s.culture or 0,math.max(0,cost-progress)))
+    if amount<1 then return end
+    s.cultureSerial=(s.cultureSerial or 0)+1
+    s.culture=(s.culture or 0)-amount
+    s.pending={kind='culture',item=item,before=progress,amount=amount,
+        uiReadback=true,serial=s.cultureSerial}
+    save(p,s) -- Reserve before the native setter; never replay uncertain writes.
+    o:ChangeCurrentCulturalProgress(amount)
 end
 
 local function eventKey(eventType,x,y,id)
@@ -178,7 +202,11 @@ local function onOccurred(eventType,severity,x,y,mitigation,id)
             local city=W.plotCity(Map.GetPlotByIndex(index))
             if city and W.protected(city) then cities[city:GetOwner()..':'..city:GetID()]=city end
         end
-        for cityKey,city in pairs(cities) do
+        local keys={}
+        for key in pairs(cities) do keys[#keys+1]=key end
+        table.sort(keys)
+        for _,cityKey in ipairs(keys) do
+            local city=cities[cityKey]
             if not W.enabled('RewardRequiresSanctuary') or W.sanctuary(city) then
                 local p=Players[city:GetOwner()]
                 local s=state(p)
@@ -339,13 +367,15 @@ end
 local function request(playerID,args)
     -- UI sends identifiers only; faith, charges, unlocks, war, visibility and distance are re-read here.
     if type(args)~='table' or not W.minoan(playerID) then return end
-    -- These UI helpers can be absent in the gameplay Lua context.
-    if (GameConfiguration.IsAnyMultiplayer and GameConfiguration.IsAnyMultiplayer())
-        or (GameConfiguration.IsHotseat and GameConfiguration.IsHotseat()) then
-        status(playerID,'本开发版暂不支持联机/热座，未执行操作。'); return
-    end
     local ok,message
-    if args.Action=='FlushKnowledge' then
+    if args.Action=='CultureSnapshot' then
+        if flushing[playerID] then return end
+        flushing[playerID]=true
+        local success,err=pcall(cultureSnapshot,playerID,args)
+        flushing[playerID]=nil
+        if not success then error(err) end
+        return
+    elseif args.Action=='FlushKnowledge' then
         flush(playerID)
         return
     elseif args.Action=='Retire' then
@@ -435,18 +465,19 @@ end
 
 -- Explicit diagnostics; registration alone does not prove the game's callback timing.
 local function initialize()
-    -- Gameplay may not expose the multiplayer helpers available to UI scripts.
-    if (GameConfiguration.IsAnyMultiplayer and GameConfiguration.IsAnyMultiplayer())
-        or (GameConfiguration.IsHotseat and GameConfiguration.IsHotseat()) then
-        log('此版本仅支持单人；Gameplay脚本未启用。'); return
-    end
     if not GameInfo.MNS_Settings then log('ERROR: MNS_Settings 不存在；检查 Database.log。'); return end
-    Events.PlayerTurnActivated.Add(guard('PlayerTurnActivated',turn))
+    GameEvents.PlayerTurnStartComplete.Add(guard('PlayerTurnStartComplete',turn))
     Events.ResearchChanged.Add(guard('ResearchChanged',flush))
-    Events.CivicChanged.Add(guard('CivicChanged',flush))
+    Events.CivicChanged.Add(guard('CivicChanged',function(id)
+        if W.minoan(id) then
+            local p=Players[id]
+            p:SetProperty('MNS_CultureRevision',(p:GetProperty('MNS_CultureRevision') or 0)+1)
+            flush(id)
+        end
+    end))
     Events.RandomEventStarted.Add(guard('RandomEventStarted',onStarted))
     Events.RandomEventOccurred.Add(guard('RandomEventOccurred',onOccurred))
     GameEvents.MNS_Action.Add(guard('MNS_Action',request))
-    log('Loaded Alpha 4: native structure protection; population-only compensation; closed cultivation pool. Comet records='..tostring(W.cometAvailable())..'; in-game validation required.')
+    log('Loaded Alpha 5 multiplayer: core turn events; synchronized culture snapshots; closed cultivation pool. Comet records='..tostring(W.cometAvailable())..'; in-game validation required.')
 end
 initialize()
